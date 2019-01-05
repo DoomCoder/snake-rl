@@ -1,11 +1,6 @@
 import random
 import gym
-# import importlib.util
-# spec = importlib.util.spec_from_file_location("module.name", "./gym-snake")
-# gym_snake = importlib.util.module_from_spec(spec)
-# spec.loader.exec_module(gym_snake)
 import sys
-# the mock-0.3.1 dir contains testcase.py, testutils.py & mock.py
 sys.path.append('../snake_gym')  # x D
 import gym_snake
 import numpy as np
