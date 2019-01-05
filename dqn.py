@@ -69,7 +69,6 @@ if __name__ == "__main__":
     # agent.load("./save/SNEK-dqn.h5")
     done = False
     batch_size = 32
-    exit()
 
     for e in range(EPISODES):
         state = env.reset()
