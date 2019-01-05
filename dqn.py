@@ -1,5 +1,6 @@
 import random
 import gym
+import abc
 import sys
 sys.path.append('../snake_gym')  # x D
 import gym_snake
@@ -12,6 +13,8 @@ from keras.optimizers import Adam
 EPISODES = 1000
 
 class DQNAgent:
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
@@ -23,20 +26,17 @@ class DQNAgent:
         self.learning_rate = 0.001
         self.model = self._build_model()
 
+    @abc.abstractmethod
     def _build_model(self):
-        # Neural Net for Deep-Q learning Model
-        model = Sequential()
-        model.add(Dense(24, input_dim=self.state_size, activation='relu'))
-        model.add(Dense(24, activation='relu'))
-        model.add(Dense(self.action_size, activation='linear'))
-        model.compile(loss='mse',
-                      optimizer=Adam(lr=self.learning_rate))
-        return model
+        return
 
     def remember(self, state, action, reward, next_state, done):
+        state = self.reshape(state)
+        next_state = self.reshape(next_state)
         self.memory.append((state, action, reward, next_state, done))
 
     def act(self, state):
+        state = self.reshape(state)
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
         act_values = self.model.predict(state)
@@ -60,26 +60,45 @@ class DQNAgent:
     def save(self, name):
         self.model.save_weights(name)
 
+    @abc.abstractmethod
+    def reshape(self, state):
+        return
+
+
+class SimpleDQNAgent(DQNAgent):
+    def _build_model(self):
+        # Neural Net for Deep-Q learning Model
+        model = Sequential()
+        model.add(Dense(24, input_dim=self.state_size, activation='relu'))
+        model.add(Dense(24, activation='relu'))
+        model.add(Dense(self.action_size, activation='linear'))
+        model.compile(loss='mse',
+                      optimizer=Adam(lr=self.learning_rate))
+        return model
+
+    def reshape(self, state):
+        return np.reshape(state, [1, self.state_size])
+
 
 if __name__ == "__main__":
     env = gym.make('snake-v0')
     state_size = env.observation_space.shape[0]
     action_size = env.action_space.n
-    agent = DQNAgent(state_size, action_size)
+    agent = SimpleDQNAgent(state_size, action_size)
     # agent.load("./save/SNEK-dqn.h5")
     done = False
     batch_size = 32
 
     for e in range(EPISODES):
         state = env.reset()
-        state = np.reshape(state, [1, state_size])
+        # state = np.reshape(state, [1, state_size])
         time = 0
         while not done:
             # env.render()
             action = agent.act(state)
             next_state, reward, done, _ = env.step(action)
             reward = reward if not done else -10
-            next_state = np.reshape(next_state, [1, state_size])
+            # next_state = np.reshape(next_state, [1, state_size])
             agent.remember(state, action, reward, next_state, done)
             state = next_state
             time += 1
