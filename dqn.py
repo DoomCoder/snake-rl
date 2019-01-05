@@ -86,7 +86,7 @@ if __name__ == "__main__":
             time += 1
             if done:
                 print("episode: {}/{}, score: {}, e: {:.2}"
-                      .format(e, EPISODES, 0, agent.epsilon))
+                      .format(e, EPISODES, time, agent.epsilon))
                 break
             if len(agent.memory) > batch_size:
                 agent.replay(batch_size)
