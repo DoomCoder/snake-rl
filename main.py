@@ -1,6 +1,8 @@
 import gym
 
 from simpleDQN import SimpleDQNAgent
+# from convDQN import ConvDQNAgent
+
 
 N_EPISODES_SIMPLE = 1000
 
@@ -9,6 +11,7 @@ if __name__ == "__main__":
     state_size = env.observation_space.shape[0] * env.observation_space.shape[1] * env.observation_space.shape[2]
     action_size = env.action_space.n
     agent = SimpleDQNAgent(state_size, action_size)
+    # agent = ConvDQNAgent(env.observation_space.shape, action_size)
     # agent.load("./SNEK-dqn.h5")
     done = False
     batch_size = 32
