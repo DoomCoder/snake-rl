@@ -1,20 +1,22 @@
 import gym
 
-from simpleDQN import SimpleDQNAgent
-# from convDQN import ConvDQNAgent
+# from simpleDQN import SimpleDQNAgent
+from convDQN import ConvDQNAgent
 
 
-N_EPISODES_SIMPLE = 1000
+N_EPISODES_SIMPLE = 1000000000
 
 if __name__ == "__main__":
     env = gym.make('snake-v0')
     state_size = env.observation_space.shape[0] * env.observation_space.shape[1] * env.observation_space.shape[2]
     action_size = env.action_space.n
-    agent = SimpleDQNAgent(state_size, action_size)
-    # agent = ConvDQNAgent(env.observation_space.shape, action_size)
+    # agent = SimpleDQNAgent(state_size, action_size)
+    agent = ConvDQNAgent(env.observation_space.shape, action_size)
     # agent.load("./SNEK-dqn.h5")
     done = False
-    batch_size = 32
+    batch_size = 64
+
+    i = 0
 
     for e in range(N_EPISODES_SIMPLE):
         state = env.reset()
@@ -35,11 +37,12 @@ if __name__ == "__main__":
             agent.remember(state, action, reward, next_state, done)
             state = next_state
             time += 1
+            i += 1
             if done:
                 print("episode: {}/{}, time: {}, score: {}, e: {:.2}"
                       .format(e, N_EPISODES_SIMPLE, time, reward_sum, agent.epsilon))
                 break
-            if len(agent.memory) > batch_size:
+            if len(agent.memory) > batch_size and (i % batch_size == 0):
                 agent.replay(batch_size)
         if e % 100 == 0:
             agent.save("./SNEK-dqn.h5")
