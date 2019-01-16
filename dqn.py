@@ -11,14 +11,14 @@ from collections import deque
 class DQNAgent:
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, state_size, action_size):
-        self.state_size = state_size
+    def __init__(self, state_shape, action_size):
+        self.state_shape = state_shape
         self.action_size = action_size
         self.memory = deque(maxlen=2000)
         self.gamma = 0.95    # discount rate
         self.epsilon = 1.0  # exploration rate
-        self.epsilon_min = 0.01
-        self.epsilon_decay = 0.9999
+        self.epsilon_min = 0.001
+        self.epsilon_decay = 0.999
         self.learning_rate = 0.001
         self.model = self._build_model()
 
@@ -35,7 +35,8 @@ class DQNAgent:
         state = self.reshape(state)
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
-        act_values = self.model.predict(state)
+        new_state = np.expand_dims(state, axis=0)
+        act_values = self.model.predict(new_state)
         return np.argmax(act_values[0])  # returns action
 
     @abc.abstractmethod
@@ -50,4 +51,4 @@ class DQNAgent:
 
     @abc.abstractmethod
     def reshape(self, state):
-        return
+        return state

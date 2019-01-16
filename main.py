@@ -1,42 +1,49 @@
 import gym
 
 from simpleDQN import SimpleDQNAgent
+from convDQN import ConvDQNAgent
 
-N_EPISODES_SIMPLE = 1000
+
+N_EPISODES = 10**7
 
 if __name__ == "__main__":
     env = gym.make('snake-v0')
-    state_size = env.observation_space.shape[0] * env.observation_space.shape[1] * env.observation_space.shape[2]
     action_size = env.action_space.n
-    agent = SimpleDQNAgent(state_size, action_size)
+    # agent = SimpleDQNAgent(env.observation_space.shape, action_size)
+    agent = ConvDQNAgent(env.observation_space.shape, action_size)
     # agent.load("./SNEK-dqn.h5")
     done = False
-    batch_size = 32
+    batch_size = 128
+    i = 0
 
-    for e in range(N_EPISODES_SIMPLE):
+    for e in range(N_EPISODES):
         state = env.reset()
         done = False
         # env.renderer.close_window()
-        # print(state)
         # exit()
-        # state = np.reshape(state, [1, state_size])
-        time = 0
+        steps = 0
         reward_sum = 0
         while not done:
             # env.render()
             action = agent.act(state)
             next_state, reward, done, _ = env.step(action)
-            reward = reward if not done else -10
+            if done:
+                reward = -100
+            elif reward:
+                reward = 100
+            else:
+                reward = -1
+
             reward_sum += reward
-            # next_state = np.reshape(next_state, [1, state_size])
             agent.remember(state, action, reward, next_state, done)
             state = next_state
-            time += 1
+            steps += 1
+            i += 1
             if done:
-                print("episode: {}/{}, time: {}, score: {}, e: {:.2}"
-                      .format(e, N_EPISODES_SIMPLE, time, reward_sum, agent.epsilon))
+                print("episode: {}/{}, steps: {}, score: {}, e: {:.2}"
+                      .format(e, N_EPISODES, steps, reward_sum, agent.epsilon))
                 break
-            if len(agent.memory) > batch_size:
+            if len(agent.memory) > batch_size and (i % batch_size == 0):
                 agent.replay(batch_size)
         if e % 100 == 0:
             agent.save("./SNEK-dqn.h5")
