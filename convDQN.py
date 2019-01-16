@@ -40,27 +40,19 @@ class ConvDQNAgent(DQNAgent):
         return model
 
     def replay(self, batch_size):
-        memory = np.array(self.memory)
         minibatch = random.sample(self.memory, batch_size)
-        minibatch_indices = np.random.randint(high=memory.shape[0], low=NUM_LAST_FRAMES, size=batch_size)
         input_batch = np.empty((0,) + (NUM_LAST_FRAMES, ) + self.state_shape[1:])
         target_batch = np.empty((0, self.action_size))
         # todo could be vectorized
-        for state_idx in minibatch_indices:
-            state, action, reward, next_state, done = memory[state_idx]
-            last_observations = memory[state_idx-NUM_LAST_FRAMES:state_idx-1]
-            last_states = np.array([obs[0] for obs in last_observations])
-            last_states = last_states[:, 0, :, :]
-            # exp_state = np.expand_dims(state, axis=0)
-            states = np.append(last_states, state, axis=0)
-            exp_next_state = np.expand_dims(next_state, axis=0)
-            next_states = np.append(states[1:], state, axis=0)
+        for states, action, reward, next_states, done in minibatch:
             exp_next_states = np.expand_dims(next_states, axis=0)
             exp_states = np.expand_dims(states, axis=0)
+
             target = (reward + self.gamma *
                       np.amax(self.model.predict(exp_next_states)))
             target_f = self.model.predict(exp_states)
             target_f[0][action] = target
+
             input_batch = np.append(input_batch, exp_states, axis=0)
             target_batch = np.append(target_batch, target_f, axis=0)
 
