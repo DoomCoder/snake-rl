@@ -40,12 +40,14 @@ class ConvDQNAgent(DQNAgent):
         return model
 
     def replay(self, batch_size):
-        sorted_memory = sorted(self.memory, key=lambda x: abs(x[2]), reverse=True)
-        p = np.array([0.7 ** i for i in range(len(sorted_memory))])
-        # @todo make this parameter a field in the class
-        p = p / sum(p)
-        sample_idxs = np.random.choice(np.arange(len(sorted_memory)), size=batch_size, p=p)
-        minibatch = [sorted_memory[idx] for idx in sample_idxs]
+        # sorted_memory = sorted(self.memory, key=lambda x: abs(x[2]), reverse=True)
+        # p = np.array([0.2 ** i for i in range(len(sorted_memory))])
+        # # @todo make this parameter a field in the class
+        # p = p / sum(p)
+        # sample_idxs = np.random.choice(np.arange(len(sorted_memory)), size=batch_size, p=p)
+        # minibatch = [sorted_memory[idx] for idx in sample_idxs]
+
+        minibatch = random.sample(self.memory, batch_size)
 
         input_batch = np.empty((0,) + (NUM_LAST_FRAMES, ) + self.state_shape[1:])
         target_batch = np.empty((0, self.action_size))
@@ -70,15 +72,7 @@ class ConvDQNAgent(DQNAgent):
 
         exp_states = np.expand_dims(states, axis=0)
         act_values = self.model.predict(exp_states)
-        return np.argmax(act_values[0])  # returns action
-
-        memory = np.array(self.memory)
-        last_observations = memory[-NUM_LAST_FRAMES:-1]
-        last_states = np.array([obs[0] for obs in last_observations])
-        last_states = last_states[:, 0, :, :]
-
-        states = np.append(last_states, state, axis=0)
-
-        exp_states = np.expand_dims(states, axis=0)
-        act_values = self.model.predict(exp_states)
+        # print(states[-1])
+        # print(act_values[0])
+        # print(np.argmax(act_values[0]))
         return np.argmax(act_values[0])  # returns action

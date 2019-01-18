@@ -6,7 +6,7 @@ import numpy as np
 from collections import deque
 
 NUM_LAST_FRAMES = 3
-N_EPISODES = 10**5
+N_EPISODES = 10**3
 # the percentage of the training process at which the exploration rate should reach its minimum
 EXPLORATION_PHASE_SIZE = 0.5
 
@@ -71,6 +71,7 @@ if __name__ == "__main__":
                 print("episode: {}/{}, steps: {}, score: {}, e: {:.2}, samples with fruits: {}"
                       .format(e, N_EPISODES, steps, reward_sum, agent.epsilon, samples_with_fruits))
                 break
+
             if len(agent.memory) > batch_size and (i % batch_size == 0):
                 agent.replay(batch_size)
 
@@ -78,5 +79,5 @@ if __name__ == "__main__":
         if agent.epsilon > agent.epsilon_min:
             agent.epsilon -= agent.epsilon_decay
 
-        if e % 100 == 0:
+        if e % 1000 == 0:
             agent.save("./SNEK-dqn600k.h5")
