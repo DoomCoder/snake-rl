@@ -40,7 +40,13 @@ class ConvDQNAgent(DQNAgent):
         return model
 
     def replay(self, batch_size):
-        minibatch = random.sample(self.memory, batch_size)
+        sorted_memory = sorted(self.memory, key=lambda x: abs(x[2]), reverse=True)
+        p = np.array([0.7 ** i for i in range(len(sorted_memory))])
+        # @todo make this parameter a field in the class
+        p = p / sum(p)
+        sample_idxs = np.random.choice(np.arange(len(sorted_memory)), size=batch_size, p=p)
+        minibatch = [sorted_memory[idx] for idx in sample_idxs]
+
         input_batch = np.empty((0,) + (NUM_LAST_FRAMES, ) + self.state_shape[1:])
         target_batch = np.empty((0, self.action_size))
         # todo could be vectorized
@@ -58,10 +64,13 @@ class ConvDQNAgent(DQNAgent):
 
         self.model.fit(input_batch, target_batch, verbose=0)
 
-    def act(self, state):
-        state = self.reshape(state)
-        if np.random.rand() <= self.epsilon or len(self.memory) < NUM_LAST_FRAMES:
+    def act(self, states):
+        if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
+
+        exp_states = np.expand_dims(states, axis=0)
+        act_values = self.model.predict(exp_states)
+        return np.argmax(act_values[0])  # returns action
 
         memory = np.array(self.memory)
         last_observations = memory[-NUM_LAST_FRAMES:-1]

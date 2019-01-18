@@ -6,7 +6,7 @@ import numpy as np
 from collections import deque
 
 NUM_LAST_FRAMES = 3
-N_EPISODES = 10**4
+N_EPISODES = 10**5
 # the percentage of the training process at which the exploration rate should reach its minimum
 EXPLORATION_PHASE_SIZE = 0.5
 
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     action_size = env.action_space.n
     # agent = SimpleDQNAgent(env.observation_space.shape, action_size)
     agent = ConvDQNAgent(env.observation_space.shape, action_size)
-    # agent.load("./SNEK-dqn.h5")
+    agent.load("./SNEK-dqn600k.h5")
     done = False
     batch_size = 128
     i = 0
@@ -38,6 +38,7 @@ if __name__ == "__main__":
     # calc constant epsilon dacay
     agent.epsilon_decay = ((agent.epsilon - agent.epsilon_min) / (N_EPISODES * EXPLORATION_PHASE_SIZE))
 
+    samples_with_fruits = 0
     for e in range(N_EPISODES):
         state = env.reset()
         done = False
@@ -49,15 +50,17 @@ if __name__ == "__main__":
         while not done:
             state_history.append(state)
             # env.render()
-            action = agent.act(state)
+            states = get_last_frames(state_history)
+            states = fill_empty_frames(states)
+            action = agent.act(states)
             next_state, reward, done, _ = env.step(action)
+            if reward > 0:
+                samples_with_fruits += 1
+
             if done:
                 reward = -1
 
             reward_sum += reward
-
-            states = get_last_frames(state_history)
-            states = fill_empty_frames(states)
             next_states = np.append(states[1:], next_state, axis=0)
 
             agent.remember(states, action, reward, next_states, done)
@@ -65,8 +68,8 @@ if __name__ == "__main__":
             steps += 1
             i += 1
             if done:
-                print("episode: {}/{}, steps: {}, score: {}, e: {:.2}"
-                      .format(e, N_EPISODES, steps, reward_sum, agent.epsilon))
+                print("episode: {}/{}, steps: {}, score: {}, e: {:.2}, samples with fruits: {}"
+                      .format(e, N_EPISODES, steps, reward_sum, agent.epsilon, samples_with_fruits))
                 break
             if len(agent.memory) > batch_size and (i % batch_size == 0):
                 agent.replay(batch_size)
@@ -76,4 +79,4 @@ if __name__ == "__main__":
             agent.epsilon -= agent.epsilon_decay
 
         if e % 100 == 0:
-            agent.save("./SNEK-dqn2137.h5")
+            agent.save("./SNEK-dqn600k.h5")
