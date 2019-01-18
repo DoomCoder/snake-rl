@@ -47,10 +47,6 @@ if __name__ == "__main__":
             action = agent.act(state)
             next_state, reward, done, _ = env.step(action)
             if done:
-                reward = -100
-            elif reward:
-                reward = 100
-            else:
                 reward = -1
 
             reward_sum += reward
