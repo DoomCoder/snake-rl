@@ -17,10 +17,11 @@ class DQNAgent:
         self.memory = deque(maxlen=2000)
         self.gamma = 0.95    # discount rate
         self.epsilon = 1.0  # exploration rate
-        self.epsilon_min = 0.001
-        self.epsilon_decay = 0.999
+        self.epsilon_min = 0.1
         self.learning_rate = 0.001
         self.model = self._build_model()
+        # when train will be agent's method, it should be calculated there, not in main xd
+        self.epsilon_decay = None
 
     @abc.abstractmethod
     def _build_model(self):

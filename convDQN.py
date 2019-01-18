@@ -57,8 +57,6 @@ class ConvDQNAgent(DQNAgent):
             target_batch = np.append(target_batch, target_f, axis=0)
 
         self.model.fit(input_batch, target_batch, verbose=0)
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
 
     def act(self, state):
         state = self.reshape(state)

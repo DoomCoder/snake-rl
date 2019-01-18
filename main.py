@@ -6,7 +6,9 @@ import numpy as np
 from collections import deque
 
 NUM_LAST_FRAMES = 3
-N_EPISODES = 10**7
+N_EPISODES = 10**4
+# the percentage of the training process at which the exploration rate should reach its minimum
+EXPLORATION_PHASE_SIZE = 0.5
 
 
 def get_last_frames(history):
@@ -32,6 +34,9 @@ if __name__ == "__main__":
     done = False
     batch_size = 128
     i = 0
+
+    # calc constant epsilon dacay
+    agent.epsilon_decay = ((agent.epsilon - agent.epsilon_min) / (N_EPISODES * EXPLORATION_PHASE_SIZE))
 
     for e in range(N_EPISODES):
         state = env.reset()
@@ -65,5 +70,10 @@ if __name__ == "__main__":
                 break
             if len(agent.memory) > batch_size and (i % batch_size == 0):
                 agent.replay(batch_size)
+
+        # update epsilon decay every episode (should be in agent's train method
+        if agent.epsilon > agent.epsilon_min:
+            agent.epsilon -= agent.epsilon_decay
+
         if e % 100 == 0:
             agent.save("./SNEK-dqn2137.h5")
