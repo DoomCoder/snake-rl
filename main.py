@@ -5,21 +5,20 @@ from convDQN import ConvDQNAgent
 import numpy as np
 from collections import deque
 
-NUM_LAST_FRAMES = 5
+NUM_LAST_FRAMES = 3
 N_EPISODES = 10**7
 
 
 def get_last_frames(history):
     states = np.array(history)
-    states = states[:, 0, :, :]
+    states = states[-NUM_LAST_FRAMES:, 0, :, :]
     return states
 
 
 def fill_empty_frames(states):
-    if states.shape[0] < NUM_LAST_FRAMES - 1:
-        empty_states = np.zeros_like(state[0, :, :])
-        empty_states = np.tile(empty_states, (NUM_LAST_FRAMES - 1 - states.shape[0], 1, 1))
-        states = np.append(empty_states, states, axis=0)
+    if states.shape[0] < NUM_LAST_FRAMES:
+        duplicated_states = np.tile(states[0], (NUM_LAST_FRAMES - states.shape[0], 1, 1))
+        states = np.append(duplicated_states, states, axis=0)
 
     return states
 
@@ -56,9 +55,8 @@ if __name__ == "__main__":
 
             reward_sum += reward
 
-            last_states = get_last_frames(state_history)
-            last_states = fill_empty_frames(last_states)
-            states = np.append(last_states, state, axis=0)
+            states = get_last_frames(state_history)
+            states = fill_empty_frames(states)
             next_states = np.append(states[1:], next_state, axis=0)
 
             agent.remember(states, action, reward, next_states, done)

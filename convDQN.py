@@ -5,7 +5,7 @@ from keras.layers import Dense, Conv2D, Activation, Flatten
 from keras.optimizers import Adam, RMSprop
 from dqn import DQNAgent
 
-NUM_LAST_FRAMES = 5
+NUM_LAST_FRAMES = 3
 
 
 class ConvDQNAgent(DQNAgent):
