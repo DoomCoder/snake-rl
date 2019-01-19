@@ -6,12 +6,11 @@ import numpy as np
 from collections import deque
 
 NUM_LAST_FRAMES = 3
-N_EPISODES = 10**3
 # the percentage of the training process at which the exploration rate should reach its minimum
 EXPLORATION_PHASE_SIZE = 0.5
 
 
-MAX_EPISODES = 10 ** 7
+MAX_EPISODES = 7* 10 ** 4
 STATS_N_EPISODES = 100  # stats calculated on this many last episodes
 STATS_FREQ = 50  # print stats every STATS_FREQ number of episodes
 def get_last_frames(history):
@@ -38,7 +37,7 @@ if __name__ == "__main__":
     batch_size = 64
     reporter = Reporter(STATS_N_EPISODES, STATS_FREQ, MAX_EPISODES)
 
-    # agent.epsilon_decay = ((agent.epsilon - agent.epsilon_min) / (N_EPISODES * EXPLORATION_PHASE_SIZE))
+    agent.epsilon_decay = ((agent.epsilon - agent.epsilon_min) / (MAX_EPISODES * EXPLORATION_PHASE_SIZE))
 
     samples_with_fruits = 0
     for e in range(MAX_EPISODES):
@@ -63,6 +62,12 @@ if __name__ == "__main__":
             if done:
                 reward = -1
 
+            if reward == 0:
+                reward = -0.05
+
+            if reward > 0:
+                reward += 0.1
+
             reward_sum += reward
             next_states = np.append(states[1:], next_state, axis=0)
 
@@ -70,12 +75,14 @@ if __name__ == "__main__":
             state = next_state
             steps += 1
             if done:
+                # print("episode: {}/{}, steps: {}, score: {}, e: {:.2}, samples with fruits: {}"
+                #       .format(e, MAX_EPISODES, steps, reward_sum, agent.epsilon, samples_with_fruits))
                 reporter.remember(steps, len(env.game.snake.body), reward_sum)
                 if reporter.wants_to_report():
                     print(reporter.get_report_str())
                 break
 
-            if len(agent.memory) > batch_size and (i % batch_size == 0):
+            if len(agent.memory) > batch_size and (e % batch_size == 0):
                 agent.replay(batch_size)
 
         # update epsilon decay every episode (should be in agent's train method
@@ -84,3 +91,5 @@ if __name__ == "__main__":
 
         if e % 1000 == 0:
             agent.save("./SNEK-dqn600k.h5")
+
+    agent.save("./SNEK-dqn600k.h5")
