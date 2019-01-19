@@ -15,11 +15,12 @@ class DQNAgent:
         self.state_shape = state_shape
         self.action_size = action_size
         self.memory = deque(maxlen=4000)
-        self.gamma = 0.95    # discount rate
+        self.gamma = 0.8    # discount rate
         self.epsilon = 1.0  # exploration rate
         self.epsilon_min = 0.1
         self.learning_rate = 0.001
         self.model = self._build_model()
+        self.target_model = self._build_model()
         # when train will be agent's method, it should be calculated there, not in main xd
         self.epsilon_decay = None
 
@@ -46,6 +47,9 @@ class DQNAgent:
 
     def load(self, name):
         self.model.load_weights(name)
+
+    def load_target(self, name):
+        self.target_model.load_weights(name)
 
     def save(self, name):
         self.model.save_weights(name)

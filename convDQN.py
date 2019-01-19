@@ -57,8 +57,8 @@ class ConvDQNAgent(DQNAgent):
             exp_states = np.expand_dims(states, axis=0)
 
             target = (reward + self.gamma *
-                      np.amax(self.model.predict(exp_next_states)))
-            target_f = self.model.predict(exp_states)
+                      np.amax(self.target_model.predict(exp_next_states)))
+            target_f = self.target_model.predict(exp_states)
             target_f[0][action] = target
 
             input_batch = np.append(input_batch, exp_states, axis=0)

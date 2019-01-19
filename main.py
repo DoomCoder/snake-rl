@@ -7,13 +7,14 @@ from collections import deque
 import os
 
 weights_file = "./SNEK-dqnroomba.h5"
+target_weights_file = "./SNEK-dqnTARGET.h5"
 
 NUM_LAST_FRAMES = 3
 # the percentage of the training process at which the exploration rate should reach its minimum
-EXPLORATION_PHASE_SIZE = 0.5
+EXPLORATION_PHASE_SIZE = 0.75
 
 
-MAX_EPISODES = 2* 10 ** 4
+MAX_EPISODES = 10 ** 4
 STATS_N_EPISODES = 100  # stats calculated on this many last episodes
 STATS_FREQ = 50  # print stats every STATS_FREQ number of episodes
 def get_last_frames(history):
@@ -29,14 +30,25 @@ def fill_empty_frames(states):
 
     return states
 
+def update_target_weights():
+    # warning! overwrite!
+    agent.save(target_weights_file)
+    print("Target weights overwritten")
+
 
 if __name__ == "__main__":
     env = gym.make('snake-v0')
     action_size = env.action_space.n
     # agent = SimpleDQNAgent(env.observation_space.shape, action_size)
     agent = ConvDQNAgent(env.observation_space.shape, action_size)
-    if os.path.isfile(weights_file): agent.load(weights_file)
+    if os.path.isfile(weights_file):
+        agent.load(weights_file)
+        print('Loaded net weights')
+    if os.path.isfile(target_weights_file):
+        agent.load_target(target_weights_file)
+        print('Loaded target net weights')
     done = False
+    agent.epsilon = 0.6
     batch_size = 64
     reporter = Reporter(STATS_N_EPISODES, STATS_FREQ, MAX_EPISODES)
 
@@ -65,6 +77,9 @@ if __name__ == "__main__":
             if done:
                 reward = -1
 
+            if reward == 0:
+                reward = -0.005
+
             reward_sum += reward
             next_states = np.append(states[1:], next_state, axis=0)
 
@@ -91,3 +106,4 @@ if __name__ == "__main__":
             agent.save(weights_file)
 
     agent.save(weights_file)
+    update_target_weights()
