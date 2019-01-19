@@ -6,12 +6,11 @@ import numpy as np
 from collections import deque
 
 NUM_LAST_FRAMES = 3
-N_EPISODES = 10**3
 # the percentage of the training process at which the exploration rate should reach its minimum
 EXPLORATION_PHASE_SIZE = 0.5
 
 
-MAX_EPISODES = 10 ** 7
+MAX_EPISODES = 10 ** 5
 STATS_N_EPISODES = 100  # stats calculated on this many last episodes
 STATS_FREQ = 50  # print stats every STATS_FREQ number of episodes
 def get_last_frames(history):
@@ -33,13 +32,14 @@ if __name__ == "__main__":
     action_size = env.action_space.n
     # agent = SimpleDQNAgent(env.observation_space.shape, action_size)
     agent = ConvDQNAgent(env.observation_space.shape, action_size)
-    agent.load("./SNEK-dqn600k.h5")
+    # agent.load("./SNEK-dqn600k.h5")
     done = False
     batch_size = 64
     reporter = Reporter(STATS_N_EPISODES, STATS_FREQ, MAX_EPISODES)
 
-    # agent.epsilon_decay = ((agent.epsilon - agent.epsilon_min) / (N_EPISODES * EXPLORATION_PHASE_SIZE))
+    agent.epsilon_decay = ((agent.epsilon - agent.epsilon_min) / (MAX_EPISODES * EXPLORATION_PHASE_SIZE))
 
+    i = 0
     samples_with_fruits = 0
     for e in range(MAX_EPISODES):
     # calc constant epsilon dacay
@@ -52,6 +52,7 @@ if __name__ == "__main__":
         state_history = deque(maxlen=4)
         while not done:
             state_history.append(state)
+            i += 1
             # env.render()
             states = get_last_frames(state_history)
             states = fill_empty_frames(states)
@@ -70,12 +71,12 @@ if __name__ == "__main__":
             state = next_state
             steps += 1
             if done:
-                reporter.remember(steps, len(env.game.snake.body), reward_sum)
+                reporter.remember(steps, len(env.game.snake.body), reward_sum, agent.epsilon)
                 if reporter.wants_to_report():
                     print(reporter.get_report_str())
                 break
 
-            if len(agent.memory) > batch_size and (i % batch_size == 0):
+            if len(agent.memory) > batch_size and (i % STATS_FREQ == 0):
                 agent.replay(batch_size)
 
         # update epsilon decay every episode (should be in agent's train method
