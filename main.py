@@ -10,7 +10,7 @@ NUM_LAST_FRAMES = 3
 EXPLORATION_PHASE_SIZE = 0.5
 
 
-MAX_EPISODES = 7* 10 ** 4
+MAX_EPISODES = 2* 10 ** 4
 STATS_N_EPISODES = 100  # stats calculated on this many last episodes
 STATS_FREQ = 50  # print stats every STATS_FREQ number of episodes
 def get_last_frames(history):
@@ -62,11 +62,11 @@ if __name__ == "__main__":
             if done:
                 reward = -1
 
-            if reward == 0:
-                reward = -0.05
-
-            if reward > 0:
-                reward += 0.1
+            # if reward == 0:
+            #     reward = -0.05
+            #
+            # if reward > 0:
+            #     reward += 0.1
 
             reward_sum += reward
             next_states = np.append(states[1:], next_state, axis=0)
