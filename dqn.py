@@ -11,17 +11,21 @@ from collections import deque
 class DQNAgent:
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, state_shape, action_size):
+    def __init__(self, state_shape, action_size, num_last_frames):
         self.state_shape = state_shape
         self.action_size = action_size
+        self.num_last_frames = num_last_frames
+        self.observations = None
+        self.epsilon_decay = None
+
         self.memory = deque(maxlen=4000)
-        self.gamma = 0.95    # discount rate
-        self.epsilon = 1.0  # exploration rate
+        self.gamma = 0.95  # discount rate
+        self.epsilon_max = 1.0  # epsilon == exploration rate
         self.epsilon_min = 0.1
+        self.epsilon = self.epsilon_max
         self.learning_rate = 0.001
         self.model = self._build_model()
-        # when train will be agent's method, it should be calculated there, not in main xd
-        self.epsilon_decay = None
+
 
     @abc.abstractmethod
     def _build_model(self):
@@ -36,6 +40,7 @@ class DQNAgent:
         state = self.reshape(state)
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
+
         new_state = np.expand_dims(state, axis=0)
         act_values = self.model.predict(new_state)
         return np.argmax(act_values[0])  # returns action
