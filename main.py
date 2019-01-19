@@ -4,6 +4,9 @@ from simpleDQN import SimpleDQNAgent
 from convDQN import ConvDQNAgent
 import numpy as np
 from collections import deque
+import os
+
+weights_file = "./SNEK-dqnroomba.h5"
 
 NUM_LAST_FRAMES = 3
 # the percentage of the training process at which the exploration rate should reach its minimum
@@ -32,7 +35,7 @@ if __name__ == "__main__":
     action_size = env.action_space.n
     # agent = SimpleDQNAgent(env.observation_space.shape, action_size)
     agent = ConvDQNAgent(env.observation_space.shape, action_size)
-    agent.load("./SNEK-dqn600k.h5")
+    if os.path.isfile(weights_file): agent.load(weights_file)
     done = False
     batch_size = 64
     reporter = Reporter(STATS_N_EPISODES, STATS_FREQ, MAX_EPISODES)
@@ -62,12 +65,6 @@ if __name__ == "__main__":
             if done:
                 reward = -1
 
-            # if reward == 0:
-            #     reward = -0.05
-            #
-            # if reward > 0:
-            #     reward += 0.1
-
             reward_sum += reward
             next_states = np.append(states[1:], next_state, axis=0)
 
@@ -79,6 +76,7 @@ if __name__ == "__main__":
                 #       .format(e, MAX_EPISODES, steps, reward_sum, agent.epsilon, samples_with_fruits))
                 reporter.remember(steps, len(env.game.snake.body), reward_sum)
                 if reporter.wants_to_report():
+                    print("e: {:.2}".format(agent.epsilon))
                     print(reporter.get_report_str())
                 break
 
@@ -90,6 +88,6 @@ if __name__ == "__main__":
             agent.epsilon -= agent.epsilon_decay
 
         if e % 1000 == 0:
-            agent.save("./SNEK-dqn600k.h5")
+            agent.save(weights_file)
 
-    agent.save("./SNEK-dqn600k.h5")
+    agent.save(weights_file)
