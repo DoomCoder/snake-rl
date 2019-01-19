@@ -11,7 +11,6 @@ EXPLORATION_PHASE_SIZE = 0.5
 
 
 MAX_EPISODES = 10 ** 5
-STATS_N_EPISODES = 100  # stats calculated on this many last episodes
 BATCH_SIZE = 64
 
 
@@ -36,7 +35,7 @@ if __name__ == "__main__":
     agent = ConvDQNAgent(env.observation_space.shape, action_size)
     # agent.load("./SNEK-dqn600k.h5")
     done = False
-    reporter = Reporter(STATS_N_EPISODES, BATCH_SIZE, MAX_EPISODES)
+    reporter = Reporter(BATCH_SIZE, MAX_EPISODES)
 
     agent.epsilon_decay = ((agent.epsilon - agent.epsilon_min) / (MAX_EPISODES * EXPLORATION_PHASE_SIZE))
 
