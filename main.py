@@ -12,7 +12,9 @@ EXPLORATION_PHASE_SIZE = 0.5
 
 MAX_EPISODES = 10 ** 5
 STATS_N_EPISODES = 100  # stats calculated on this many last episodes
-STATS_FREQ = 50  # print stats every STATS_FREQ number of episodes
+BATCH_SIZE = 64
+
+
 def get_last_frames(history):
     states = np.array(history)
     states = states[-NUM_LAST_FRAMES:, 0, :, :]
@@ -34,8 +36,7 @@ if __name__ == "__main__":
     agent = ConvDQNAgent(env.observation_space.shape, action_size)
     # agent.load("./SNEK-dqn600k.h5")
     done = False
-    batch_size = 64
-    reporter = Reporter(STATS_N_EPISODES, STATS_FREQ, MAX_EPISODES)
+    reporter = Reporter(STATS_N_EPISODES, BATCH_SIZE, MAX_EPISODES)
 
     agent.epsilon_decay = ((agent.epsilon - agent.epsilon_min) / (MAX_EPISODES * EXPLORATION_PHASE_SIZE))
 
@@ -76,8 +77,8 @@ if __name__ == "__main__":
                     print(reporter.get_report_str())
                 break
 
-            if len(agent.memory) > batch_size and (i % STATS_FREQ == 0):
-                agent.replay(batch_size)
+            if len(agent.memory) > BATCH_SIZE and (i % BATCH_SIZE == 0):
+                agent.replay(BATCH_SIZE)
 
         # update epsilon decay every episode (should be in agent's train method
         if agent.epsilon > agent.epsilon_min:
