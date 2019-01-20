@@ -1,6 +1,4 @@
 import random
-from collections import deque
-
 import numpy as np
 from keras import Sequential
 from keras.layers import Dense, Conv2D, Activation, Flatten
@@ -19,7 +17,8 @@ class ConvDQNAgent(DQNAgent):
             kernel_size=(3, 3),
             strides=(1, 1),
             data_format='channels_first',
-            input_shape=(self.num_last_frames, ) + self.state_shape[1:]  # (NUM_LAST_FRAMES, H, W)
+            # shape: (NUM_LAST_FRAMES, H, W)
+            input_shape=(self.num_last_observations,) + self.state_shape
         ))
         model.add(Activation('relu'))
         model.add(Conv2D(
@@ -36,57 +35,57 @@ class ConvDQNAgent(DQNAgent):
         model.add(Activation('relu'))
         model.add(Dense(self.action_size))
 
-        # model.summary() # print model summary
+        model.summary() # print model summary
         model.compile(RMSprop(), 'MSE')
         return model
 
     def replay(self, batch_size):
-        minibatch = random.sample(self.memory, batch_size)
+        memory_sample = random.sample(self.memory, batch_size)
+        np_memory_sample = np.array(memory_sample)
 
-        input_batch = np.empty((0,) + (self.num_last_frames, ) + self.state_shape[1:])
-        target_batch = np.empty((0, self.action_size))
-        # todo could be vectorized
-        for states, action, reward, next_states, done in minibatch:
-            exp_next_states = np.expand_dims(next_states, axis=0)
-            exp_states = np.expand_dims(states, axis=0)
+        states_arr = np.stack(np_memory_sample[:,0])
+        actions_arr = np_memory_sample[:,1].astype(np.int)
+        rewards_arr = np_memory_sample[:,2]
+        next_states_arr = np.stack(np_memory_sample[:, 3])
 
-            target = (reward + self.gamma *
-                      np.amax(self.model.predict(exp_next_states)))
-            target_f = self.model.predict(exp_states)
-            target_f[0][action] = target
+        updated_targets = rewards_arr + self.gamma * np.amax(self.model.predict(next_states_arr))
+        actions_targets = self.model.predict(states_arr)
+        actions_targets[np.arange(actions_arr.shape[0]), actions_arr] = updated_targets
+        self.model.fit(states_arr, actions_targets, verbose=0)
 
-            input_batch = np.append(input_batch, exp_states, axis=0)
-            target_batch = np.append(target_batch, target_f, axis=0)
+        # NON VECTORIZED & more readable version
+        # input_batch = []
+        # target_batch = []
+        # for state, action, reward, next_state, _ in memory_sample:
+        #     # print(self.model.predict(np.expand_dims(next_state, axis=0)))
+        #     # print('model prediction^')
+        #     # print(np.amax(self.model.predict(np.expand_dims(next_state, axis=0))))
+        #     # print('max model prediction^')
+        #     target = (reward + self.gamma *
+        #               np.amax(self.model.predict(np.expand_dims(next_state, axis=0))))
+        #     # print(target)
+        #     # print('target^')
+        #     # assert False
+        #     target_f = self.model.predict(np.expand_dims(state, 0))
+        #     target_f[0][action] = target
+        #
+        #     input_batch.append(state)
+        #     target_batch.append(target_f[0])
+        # self.model.fit(np.array(input_batch), np.array(target_batch), verbose=0)
 
-        self.model.fit(input_batch, target_batch, verbose=0)
+        # TEST indicating that vectorized version == non vectorized
+        # assert (np.array_equal(states_arr, np.array(input_batch)))
+        # assert (np.array_equal(target_batch, np.array(target_batch)))
 
-    def act(self, states):
-        if np.random.rand() <= self.epsilon:
-            return random.randrange(self.action_size)
 
-        exp_states = np.expand_dims(states, axis=0)
-        act_values = self.model.predict(exp_states)
-        return np.argmax(act_values[0])  # returns action
-
-    def get_last_observations(self, observation):
-        if self.observations is None:
-            self.observations = deque([observation] * self.num_last_frames)
-        else:
-            self.observations.append(observation)
-            self.observations.popleft()
-
-        return np.array(self.observations)
-        # return np.expand_dims(self.frames, axis=0)
-
-    def train(self, env, batch_size, n_episodes, exploration_phase_size):
+    def train(self, env, batch_size, n_episodes, exploration_phase_size, save_freq=1000):
         reporter = Reporter(batch_size, n_episodes)
         # calc constant epsilon decay based on exploration_phase_size
         # (the percentage of the training process at which the exploration rate should reach its minimum)
         self.epsilon_decay = ((self.epsilon - self.epsilon_min) / (n_episodes * exploration_phase_size))
+        n_observations = 0
         for e in range(n_episodes):
             observation = env.reset()
-            observation = observation[0]
-
             done = False
             steps = 0
             reward_sum = 0
@@ -95,13 +94,11 @@ class ConvDQNAgent(DQNAgent):
                 state = self.get_last_observations(observation)
                 action = self.act(state)
                 next_observation, has_eaten, done, _ = env.step(action)
-                next_observation = next_observation[0]
-
                 # rewards can be changed here
                 if done:
                     reward = -1
                 elif has_eaten:
-                    reward = 1
+                    reward = len(env.game.snake.body)
                 else:
                     reward = 0
 
@@ -110,6 +107,7 @@ class ConvDQNAgent(DQNAgent):
                 self.remember(state, action, reward, next_state, done)
                 observation = next_observation
                 steps += 1
+                n_observations += 1
                 if done:
                     reporter.remember(steps, len(env.game.snake.body), reward_sum, self.epsilon)
                     if reporter.wants_to_report():
@@ -117,11 +115,11 @@ class ConvDQNAgent(DQNAgent):
 
                     break
 
-                if len(self.memory) > batch_size and (e % batch_size == 0):
+                if len(self.memory) > batch_size and (n_observations % batch_size == 0):
                     self.replay(batch_size)
 
             if self.epsilon > self.epsilon_min:
                 self.epsilon -= self.epsilon_decay
 
-            if e % 1000 == 0:
-                self.save("./SNEK-dqn600k.h5")
+            if e % save_freq == 0:
+                self.save("./SNEK-dqn.h5")

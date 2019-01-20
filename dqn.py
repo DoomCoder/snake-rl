@@ -11,17 +11,17 @@ from collections import deque
 class DQNAgent:
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, state_shape, action_size, num_last_frames):
+    def __init__(self, state_shape, action_size, num_last_observations):
         self.state_shape = state_shape
         self.action_size = action_size
-        self.num_last_frames = num_last_frames
+        self.num_last_observations = num_last_observations
         self.observations = None
         self.epsilon_decay = None
 
-        self.memory = deque(maxlen=4000)
+        self.memory = deque(maxlen=2000)
         self.gamma = 0.95  # discount rate
         self.epsilon_max = 1.0  # epsilon == exploration rate
-        self.epsilon_min = 0.1
+        self.epsilon_min = 0.05
         self.epsilon = self.epsilon_max
         self.learning_rate = 0.001
         self.model = self._build_model()
@@ -30,6 +30,15 @@ class DQNAgent:
     @abc.abstractmethod
     def _build_model(self):
         return
+
+    def get_last_observations(self, observation):
+        if self.observations is None:
+            self.observations = deque([observation] * self.num_last_observations)
+        else:
+            self.observations.append(observation)
+            self.observations.popleft()
+
+        return np.array(self.observations)
 
     def remember(self, state, action, reward, next_state, done):
         state = self.reshape(state)
@@ -41,8 +50,7 @@ class DQNAgent:
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
 
-        new_state = np.expand_dims(state, axis=0)
-        act_values = self.model.predict(new_state)
+        act_values = self.model.predict(np.expand_dims(state, 0))
         return np.argmax(act_values[0])  # returns action
 
     @abc.abstractmethod
