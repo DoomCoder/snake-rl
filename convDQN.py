@@ -1,3 +1,4 @@
+import os
 import random
 import numpy as np
 from keras import Sequential
@@ -5,6 +6,10 @@ from keras.layers import Dense, Conv2D, Activation, Flatten
 from keras.optimizers import Adam, RMSprop
 from dqn import DQNAgent
 from reporter import Reporter
+import snake_logger
+
+
+qLogger=snake_logger.QLogger()
 
 
 class ConvDQNAgent(DQNAgent):
@@ -43,25 +48,43 @@ class ConvDQNAgent(DQNAgent):
         memory_sample = random.sample(self.memory, batch_size)
         np_memory_sample = np.array(memory_sample)
 
-        states_arr = np.stack(np_memory_sample[:,0])
-        actions_arr = np_memory_sample[:,1].astype(np.int)
-        rewards_arr = np_memory_sample[:,2]
+        states_arr = np.stack(np_memory_sample[:, 0])
+        actions_arr = np_memory_sample[:, 1].astype(np.int)
+        rewards_arr = np_memory_sample[:, 2].astype(np.float)
         next_states_arr = np.stack(np_memory_sample[:, 3])
-        done_arr = np_memory_sample[:,4].astype(int)
+        done_arr = np_memory_sample[:, 4].astype(int)
 
-        updated_targets = rewards_arr + self.gamma * np.amax(self.model.predict(next_states_arr)) * (1-done_arr)
-        actions_targets = self.model.predict(states_arr)
-        actions_targets[np.arange(actions_arr.shape[0]), actions_arr] = updated_targets
-        self.model.train_on_batch(states_arr, actions_targets)
+        q_corrections = rewards_arr + self.gamma * np.amax(self.model.predict(next_states_arr), axis=1) * (1-done_arr)
+        q_table = self.model.predict(states_arr)
+        qLogger.log(q_table)
+
+        updated_qs_for_taken_actions = (
+                (1 - self.q_learning_rate) * q_table[np.arange(actions_arr.shape[0]), actions_arr] +
+                self.q_learning_rate * q_corrections
+        )
+
+        q_table[np.arange(actions_arr.shape[0]), actions_arr] = updated_qs_for_taken_actions
+        self.model.train_on_batch(states_arr, q_table)
 
         # NON VECTORIZED & more readable version
         # input_batch = []
         # target_batch = []
         # for state, action, reward, next_state, done in memory_sample:
-        #     target = (reward + done * self.gamma *
+        #     print(state)
+        #     print(next_state)
+        #     print(reward)
+        #     print(done)
+        #     print(self.model.predict(np.expand_dims(next_state, axis=0)))
+        #     print(np.amax(self.model.predict(np.expand_dims(next_state, axis=0))))
+        #
+        #     target = (reward + (1-done) * self.gamma *
         #               np.amax(self.model.predict(np.expand_dims(next_state, axis=0))))
+        #
         #     target_f = self.model.predict(np.expand_dims(state, 0))
+        #     print(target_f)
         #     target_f[0][action] = target
+        #     print(target_f)
+        #     assert False
         #
         #     input_batch.append(state)
         #     target_batch.append(target_f[0])
@@ -71,7 +94,7 @@ class ConvDQNAgent(DQNAgent):
         # assert (np.array_equal(states_arr, np.array(input_batch)))
         # assert (np.array_equal(target_batch, np.array(target_batch)))
 
-    def train(self, env, batch_size, n_episodes, exploration_phase_size, report_freq, save_freq=1000):
+    def train(self, env, batch_size, n_episodes, exploration_phase_size, report_freq, save_freq, models_dir):
         reporter = Reporter(report_freq, n_episodes)
         # calc constant epsilon decay based on exploration_phase_size
         # (the percentage of the training process at which the exploration rate should reach its minimum)
@@ -116,4 +139,5 @@ class ConvDQNAgent(DQNAgent):
                 self.epsilon -= self.epsilon_decay
 
             if e % save_freq == 0:
-                self.save("./SNEK-dqn.h5")
+                model_path = os.path.join(models_dir, f'SNEK-dqn-{e}-episodes.h5')
+                self.save(model_path)
