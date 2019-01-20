@@ -47,53 +47,46 @@ class ConvDQNAgent(DQNAgent):
         actions_arr = np_memory_sample[:,1].astype(np.int)
         rewards_arr = np_memory_sample[:,2]
         next_states_arr = np.stack(np_memory_sample[:, 3])
+        done_arr = np_memory_sample[:,4].astype(int)
 
-        updated_targets = rewards_arr + self.gamma * np.amax(self.model.predict(next_states_arr))
+        updated_targets = rewards_arr + self.gamma * np.amax(self.model.predict(next_states_arr)) * (1-done_arr)
         actions_targets = self.model.predict(states_arr)
         actions_targets[np.arange(actions_arr.shape[0]), actions_arr] = updated_targets
-        self.model.fit(states_arr, actions_targets, verbose=0)
+        self.model.train_on_batch(states_arr, actions_targets)
 
         # NON VECTORIZED & more readable version
         # input_batch = []
         # target_batch = []
-        # for state, action, reward, next_state, _ in memory_sample:
-        #     # print(self.model.predict(np.expand_dims(next_state, axis=0)))
-        #     # print('model prediction^')
-        #     # print(np.amax(self.model.predict(np.expand_dims(next_state, axis=0))))
-        #     # print('max model prediction^')
-        #     target = (reward + self.gamma *
+        # for state, action, reward, next_state, done in memory_sample:
+        #     target = (reward + done * self.gamma *
         #               np.amax(self.model.predict(np.expand_dims(next_state, axis=0))))
-        #     # print(target)
-        #     # print('target^')
-        #     # assert False
         #     target_f = self.model.predict(np.expand_dims(state, 0))
         #     target_f[0][action] = target
         #
         #     input_batch.append(state)
         #     target_batch.append(target_f[0])
-        # self.model.fit(np.array(input_batch), np.array(target_batch), verbose=0)
+        # self.model.train_on_batch(np.array(input_batch), np.array(target_batch))
 
         # TEST indicating that vectorized version == non vectorized
         # assert (np.array_equal(states_arr, np.array(input_batch)))
         # assert (np.array_equal(target_batch, np.array(target_batch)))
 
-
-    def train(self, env, batch_size, n_episodes, exploration_phase_size, save_freq=1000):
-        reporter = Reporter(batch_size, n_episodes)
+    def train(self, env, batch_size, n_episodes, exploration_phase_size, report_freq, save_freq=1000):
+        reporter = Reporter(report_freq, n_episodes)
         # calc constant epsilon decay based on exploration_phase_size
         # (the percentage of the training process at which the exploration rate should reach its minimum)
         self.epsilon_decay = ((self.epsilon - self.epsilon_min) / (n_episodes * exploration_phase_size))
         n_observations = 0
         for e in range(n_episodes):
+            self.observations = None
             observation = env.reset()
             done = False
             steps = 0
             reward_sum = 0
-            self.observations = None
+            state = self.get_last_observations(observation)
             while not done:
-                state = self.get_last_observations(observation)
                 action = self.act(state)
-                next_observation, has_eaten, done, _ = env.step(action)
+                new_observation, has_eaten, done, _ = env.step(action)
                 # rewards can be changed here
                 if done:
                     reward = -1
@@ -103,9 +96,10 @@ class ConvDQNAgent(DQNAgent):
                     reward = 0
 
                 reward_sum += reward
-                next_state = self.get_last_observations(next_observation)
+                next_state = self.get_last_observations(new_observation)
                 self.remember(state, action, reward, next_state, done)
-                observation = next_observation
+                state = next_state
+
                 steps += 1
                 n_observations += 1
                 if done:
@@ -115,7 +109,7 @@ class ConvDQNAgent(DQNAgent):
 
                     break
 
-                if len(self.memory) > batch_size and (n_observations % batch_size == 0):
+                if len(self.memory) > batch_size:
                     self.replay(batch_size)
 
             if self.epsilon > self.epsilon_min:

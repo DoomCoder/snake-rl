@@ -18,12 +18,11 @@ class DQNAgent:
         self.observations = None
         self.epsilon_decay = None
 
-        self.memory = deque(maxlen=2000)
+        self.memory = deque(maxlen=10**4)
         self.gamma = 0.95  # discount rate
         self.epsilon_max = 1.0  # epsilon == exploration rate
         self.epsilon_min = 0.05
         self.epsilon = self.epsilon_max
-        self.learning_rate = 0.001
         self.model = self._build_model()
 
 
@@ -40,18 +39,17 @@ class DQNAgent:
 
         return np.array(self.observations)
 
-    def remember(self, state, action, reward, next_state, done):
-        state = self.reshape(state)
-        next_state = self.reshape(next_state)
-        self.memory.append((state, action, reward, next_state, done))
-
     def act(self, state):
-        state = self.reshape(state)
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
 
         act_values = self.model.predict(np.expand_dims(state, 0))
         return np.argmax(act_values[0])  # returns action
+
+    def remember(self, state, action, reward, next_state, done):
+        state = self.reshape(state)
+        next_state = self.reshape(next_state)
+        self.memory.append((state, action, reward, next_state, done))
 
     @abc.abstractmethod
     def replay(self, batch_size):

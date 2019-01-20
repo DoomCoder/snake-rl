@@ -18,18 +18,18 @@ class AgentInput():
 def watch_agent(agent: DQNAgent):
     env = gym.make('snake-v0')
     env.__init__(human_mode=True)
-    state = env.reset()
+    observation = env.reset()
     renderer=Renderer(env.game)
-
     done = False
     steps = 0
-
+    agent.epsilon = 0
+    state = agent.get_last_observations(observation)
     while not done:
         time.sleep(0.1)
         renderer.render_frame()
         action = agent.act(state)
-        next_state, _, done, _ = env.step(action)
-        state = next_state
+        next_observation, _, done, _ = env.step(action)
+        state = agent.get_last_observations(next_observation)
         steps += 1
 
     renderer.close_window()
