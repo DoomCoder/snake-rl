@@ -6,15 +6,15 @@ import numpy as np
 from collections import deque
 import os
 
-weights_file = "./SNEK-dqnroomba.h5"
+weights_file = "./SNEK-dqnFortnite.h5"
 target_weights_file = "./SNEK-dqnTARGET.h5"
 
 NUM_LAST_FRAMES = 3
 # the percentage of the training process at which the exploration rate should reach its minimum
-EXPLORATION_PHASE_SIZE = 0.75
+EXPLORATION_PHASE_SIZE = 0.9
 
 
-MAX_EPISODES = 10 ** 4
+MAX_EPISODES = 10 ** 5
 STATS_N_EPISODES = 100  # stats calculated on this many last episodes
 STATS_FREQ = 50  # print stats every STATS_FREQ number of episodes
 def get_last_frames(history):
@@ -48,10 +48,11 @@ if __name__ == "__main__":
         agent.load_target(target_weights_file)
         print('Loaded target net weights')
     done = False
-    agent.epsilon = 0.6
+    # agent.epsilon = 0.6
     batch_size = 64
     reporter = Reporter(STATS_N_EPISODES, STATS_FREQ, MAX_EPISODES)
 
+    agent.epsilon_min = 0.01
     agent.epsilon_decay = ((agent.epsilon - agent.epsilon_min) / (MAX_EPISODES * EXPLORATION_PHASE_SIZE))
 
     samples_with_fruits = 0
@@ -77,9 +78,6 @@ if __name__ == "__main__":
             if done:
                 reward = -1
 
-            if reward == 0:
-                reward = -0.005
-
             reward_sum += reward
             next_states = np.append(states[1:], next_state, axis=0)
 
@@ -91,7 +89,6 @@ if __name__ == "__main__":
                 #       .format(e, MAX_EPISODES, steps, reward_sum, agent.epsilon, samples_with_fruits))
                 reporter.remember(steps, len(env.game.snake.body), reward_sum)
                 if reporter.wants_to_report():
-                    print("e: {:.2}".format(agent.epsilon))
                     print(reporter.get_report_str())
                 break
 
@@ -104,6 +101,7 @@ if __name__ == "__main__":
 
         if e % 1000 == 0:
             agent.save(weights_file)
+            update_target_weights()
 
     agent.save(weights_file)
     update_target_weights()
