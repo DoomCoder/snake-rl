@@ -10,6 +10,7 @@ import snake_logger
 
 qLogger=snake_logger.QLogger()
 
+
 class ConvDQNAgent(DQNAgent):
     def _build_model(self):
         model = Sequential()
@@ -53,44 +54,16 @@ class ConvDQNAgent(DQNAgent):
         done_arr = np_memory_sample[:, 4].astype(int)
 
         q_corrections = rewards_arr + self.gamma * np.amax(self.model.predict(next_states_arr), axis=1) * (1-done_arr)
-        # print(q_correction.dtype)
-        # print(self.model.predict(next_states_arr))
-        # print(np.amax(self.model.predict(next_states_arr), axis=1))
-        # assert False
-
-        # print('*** updated_targets ***')
-        # print(list(updated_targets[:10]))
-
         q_table = self.model.predict(states_arr)
         qLogger.log(q_table)
-        # print('*** actions targets before ***')
-        # print(actions_qs[:10, :])
 
-        # print(curr_qs[:5,:])
         updated_qs_for_taken_actions = (
                 (1 - self.q_learning_rate) * q_table[np.arange(actions_arr.shape[0]), actions_arr] +
                 self.q_learning_rate * q_corrections
         )
 
         q_table[np.arange(actions_arr.shape[0]), actions_arr] = updated_qs_for_taken_actions
-
-        # print('*** actions targets after ***')
-        # print(q_table[:10, :])
-
-
         self.model.train_on_batch(states_arr, q_table)
-        #
-        # print('*** states ***')
-        # print(list(states_arr[:2,:]))
-        #
-        # print('*** next states***')
-        # print(list(next_states_arr[:2,:]))
-        #
-        # print('*** rewards ***')
-        # print(list(rewards_arr[:10]))
-
-
-        # assert False
 
         # NON VECTORIZED & more readable version
         # input_batch = []
