@@ -43,25 +43,71 @@ class ConvDQNAgent(DQNAgent):
         memory_sample = random.sample(self.memory, batch_size)
         np_memory_sample = np.array(memory_sample)
 
-        states_arr = np.stack(np_memory_sample[:,0])
-        actions_arr = np_memory_sample[:,1].astype(np.int)
-        rewards_arr = np_memory_sample[:,2]
+        states_arr = np.stack(np_memory_sample[:, 0])
+        actions_arr = np_memory_sample[:, 1].astype(np.int)
+        rewards_arr = np_memory_sample[:, 2].astype(np.float)
         next_states_arr = np.stack(np_memory_sample[:, 3])
-        done_arr = np_memory_sample[:,4].astype(int)
+        done_arr = np_memory_sample[:, 4].astype(int)
 
-        updated_targets = rewards_arr + self.gamma * np.amax(self.model.predict(next_states_arr)) * (1-done_arr)
-        actions_targets = self.model.predict(states_arr)
-        actions_targets[np.arange(actions_arr.shape[0]), actions_arr] = updated_targets
-        self.model.train_on_batch(states_arr, actions_targets)
+        q_corrections = rewards_arr + self.gamma * np.amax(self.model.predict(next_states_arr), axis=1) * (1-done_arr)
+        # print(q_correction.dtype)
+        # print(self.model.predict(next_states_arr))
+        # print(np.amax(self.model.predict(next_states_arr), axis=1))
+        # assert False
+
+        # print('*** updated_targets ***')
+        # print(list(updated_targets[:10]))
+
+        q_table = self.model.predict(states_arr)
+        # print(q_table)
+        # print('*** actions targets before ***')
+        # print(actions_qs[:10, :])
+
+        # print(curr_qs[:5,:])
+        updated_qs_for_taken_actions = (
+                (1 - self.q_learning_rate) * q_table[np.arange(actions_arr.shape[0]), actions_arr] +
+                self.q_learning_rate * q_corrections
+        )
+
+        q_table[np.arange(actions_arr.shape[0]), actions_arr] = updated_qs_for_taken_actions
+
+        # print('*** actions targets after ***')
+        # print(q_table[:10, :])
+
+
+        self.model.train_on_batch(states_arr, q_table)
+        #
+        # print('*** states ***')
+        # print(list(states_arr[:2,:]))
+        #
+        # print('*** next states***')
+        # print(list(next_states_arr[:2,:]))
+        #
+        # print('*** rewards ***')
+        # print(list(rewards_arr[:10]))
+
+
+        # assert False
 
         # NON VECTORIZED & more readable version
         # input_batch = []
         # target_batch = []
         # for state, action, reward, next_state, done in memory_sample:
-        #     target = (reward + done * self.gamma *
+        #     print(state)
+        #     print(next_state)
+        #     print(reward)
+        #     print(done)
+        #     print(self.model.predict(np.expand_dims(next_state, axis=0)))
+        #     print(np.amax(self.model.predict(np.expand_dims(next_state, axis=0))))
+        #
+        #     target = (reward + (1-done) * self.gamma *
         #               np.amax(self.model.predict(np.expand_dims(next_state, axis=0))))
+        #
         #     target_f = self.model.predict(np.expand_dims(state, 0))
+        #     print(target_f)
         #     target_f[0][action] = target
+        #     print(target_f)
+        #     assert False
         #
         #     input_batch.append(state)
         #     target_batch.append(target_f[0])
