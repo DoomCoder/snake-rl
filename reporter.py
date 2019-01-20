@@ -11,6 +11,8 @@ class Reporter:
         self.max_episodes = max_episodes
         if log_to_file:
             self.reportLogger=self._init_logger()
+        else:
+            self.reportLogger=None
         
     def _init_logger(self):
         reportLogger=logging.getLogger("report")
