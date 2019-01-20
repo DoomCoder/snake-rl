@@ -11,7 +11,7 @@ import snake_logger
 class DQNAgent:
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, state_shape, action_size, num_last_observations, loss_logging=False):
+    def __init__(self, state_shape, action_size, num_last_observations, loss_logging=True):
         self.state_shape = state_shape
         self.action_size = action_size
         self.num_last_observations = num_last_observations
