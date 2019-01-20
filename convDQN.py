@@ -1,3 +1,4 @@
+import os
 import random
 import numpy as np
 from keras import Sequential
@@ -93,7 +94,7 @@ class ConvDQNAgent(DQNAgent):
         # assert (np.array_equal(states_arr, np.array(input_batch)))
         # assert (np.array_equal(target_batch, np.array(target_batch)))
 
-    def train(self, env, batch_size, n_episodes, exploration_phase_size, report_freq, save_freq=1000):
+    def train(self, env, batch_size, n_episodes, exploration_phase_size, report_freq, save_freq, models_dir):
         reporter = Reporter(report_freq, n_episodes)
         # calc constant epsilon decay based on exploration_phase_size
         # (the percentage of the training process at which the exploration rate should reach its minimum)
@@ -138,4 +139,5 @@ class ConvDQNAgent(DQNAgent):
                 self.epsilon -= self.epsilon_decay
 
             if e % save_freq == 0:
-                self.save("./SNEK-dqn.h5")
+                model_path = os.path.join(models_dir, f'SNEK-dqn-{e}-episodes.h5')
+                self.save(model_path)
