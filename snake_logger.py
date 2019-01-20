@@ -2,6 +2,7 @@ import logging
 
 import reporter
 
+
 class BaseLogger():
     def __init__(self, batch_size, autolog=True):
         self.batch_size = batch_size
@@ -40,8 +41,6 @@ class AvgPerformenceReporter(BaseLogger):
         avg = {key: sums[key]/len(log) for key in sums}
 
         return avg
-
-import sys
 
 lossLogger=logging.getLogger("loss")
 lossLogger.setLevel(logging.DEBUG)
