@@ -1,8 +1,6 @@
-from collections import deque
-import numpy as np
+import logging
 
 import reporter
-
 
 class BaseLogger():
     def __init__(self, batch_size, autolog=True):
@@ -42,3 +40,19 @@ class AvgPerformenceReporter(BaseLogger):
         avg = {key: sums[key]/len(log) for key in sums}
 
         return avg
+
+import sys
+
+lossLogger=logging.getLogger("loss")
+lossLogger.setLevel(logging.DEBUG)
+handler = logging.FileHandler("loss.log")
+handler.setLevel(logging.DEBUG)
+lossLogger.addHandler(handler)
+
+def loss_logger_decorator(func):
+    def wrapper(*args, **kwargs):
+        loss = func(*args, **kwargs)
+        lossLogger.info(loss)
+
+    return wrapper
+  

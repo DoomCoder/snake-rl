@@ -6,12 +6,12 @@ sys.path.append('../snake_gym')  # x D
 import gym_snake
 import numpy as np
 from collections import deque
-
+import snake_logger
 
 class DQNAgent:
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, state_shape, action_size, num_last_observations):
+    def __init__(self, state_shape, action_size, num_last_observations, loss_logging=False):
         self.state_shape = state_shape
         self.action_size = action_size
         self.num_last_observations = num_last_observations
@@ -24,6 +24,8 @@ class DQNAgent:
         self.epsilon_min = 0.05
         self.epsilon = self.epsilon_max
         self.model = self._build_model()
+        if loss_logging:
+            self.model.train_on_batch = snake_logger.loss_logger_decorator(self.model.train_on_batch)
 
 
     @abc.abstractmethod
