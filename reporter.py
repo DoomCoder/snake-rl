@@ -10,7 +10,7 @@ class Reporter:
         self.n_episodes = 0
         self.max_episodes = max_episodes
         if log_to_file:
-            self.lossLogger=self._init_logger()
+            self.reportLogger=self._init_logger()
         
     def _init_logger(self):
         reportLogger=logging.getLogger("report")
@@ -35,8 +35,8 @@ class Reporter:
             means[2], self.stats_n_episodes
         )
         formated_report=report_format.format(*report_data)
-        if self.lossLoger not None:
-            lossLoger.info(formated_report)
+        if self.reportLogger != None:
+            self.reportLogger.info(formated_report)
         
         return formated_report
 
