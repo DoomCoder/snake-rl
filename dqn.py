@@ -11,34 +11,45 @@ from collections import deque
 class DQNAgent:
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, state_shape, action_size):
+    def __init__(self, state_shape, action_size, num_last_observations):
         self.state_shape = state_shape
         self.action_size = action_size
-        self.memory = deque(maxlen=4000)
-        self.gamma = 0.95    # discount rate
-        self.epsilon = 1.0  # exploration rate
-        self.epsilon_min = 0.1
-        self.learning_rate = 0.001
-        self.model = self._build_model()
-        # when train will be agent's method, it should be calculated there, not in main xd
+        self.num_last_observations = num_last_observations
+        self.observations = None
         self.epsilon_decay = None
+
+        self.memory = deque(maxlen=10**4)
+        self.gamma = 0.95  # discount rate
+        self.epsilon_max = 1.0  # epsilon == exploration rate
+        self.epsilon_min = 0.05
+        self.epsilon = self.epsilon_max
+        self.model = self._build_model()
+
 
     @abc.abstractmethod
     def _build_model(self):
         return
 
+    def get_last_observations(self, observation):
+        if self.observations is None:
+            self.observations = deque([observation] * self.num_last_observations)
+        else:
+            self.observations.append(observation)
+            self.observations.popleft()
+
+        return np.array(self.observations)
+
+    def act(self, state):
+        if np.random.rand() <= self.epsilon:
+            return random.randrange(self.action_size)
+
+        act_values = self.model.predict(np.expand_dims(state, 0))
+        return np.argmax(act_values[0])  # returns action
+
     def remember(self, state, action, reward, next_state, done):
         state = self.reshape(state)
         next_state = self.reshape(next_state)
         self.memory.append((state, action, reward, next_state, done))
-
-    def act(self, state):
-        state = self.reshape(state)
-        if np.random.rand() <= self.epsilon:
-            return random.randrange(self.action_size)
-        new_state = np.expand_dims(state, axis=0)
-        act_values = self.model.predict(new_state)
-        return np.argmax(act_values[0])  # returns action
 
     @abc.abstractmethod
     def replay(self, batch_size):
