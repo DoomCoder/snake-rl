@@ -6,7 +6,7 @@ BATCH_SIZE = 64
 N_EPISODES = 10**4
 EXPLORATION_PHASE_SIZE = 0.5
 REPORT_FREQ = 100
-SAVE_FREQ = 10000
+SAVE_FREQ = 200
 
 if __name__ == "__main__":
     env = gym.make('snake-v0')

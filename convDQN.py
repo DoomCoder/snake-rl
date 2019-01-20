@@ -5,7 +5,10 @@ from keras.layers import Dense, Conv2D, Activation, Flatten
 from keras.optimizers import Adam, RMSprop
 from dqn import DQNAgent
 from reporter import Reporter
+import snake_logger
 
+
+qLogger=snake_logger.QLogger()
 
 class ConvDQNAgent(DQNAgent):
     def _build_model(self):
@@ -59,7 +62,7 @@ class ConvDQNAgent(DQNAgent):
         # print(list(updated_targets[:10]))
 
         q_table = self.model.predict(states_arr)
-        # print(q_table)
+        qLogger.log(q_table)
         # print('*** actions targets before ***')
         # print(actions_qs[:10, :])
 

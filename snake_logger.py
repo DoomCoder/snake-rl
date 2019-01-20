@@ -1,7 +1,7 @@
 import logging
 
 import reporter
-
+import numpy as np
 
 class BaseLogger():
     def __init__(self, batch_size, autolog=True):
@@ -47,6 +47,20 @@ lossLogger.setLevel(logging.DEBUG)
 handler = logging.FileHandler("loss.log")
 handler.setLevel(logging.DEBUG)
 lossLogger.addHandler(handler)
+
+
+qLogger=logging.getLogger("avg_q_values")
+qLogger.setLevel(logging.DEBUG)
+handler = logging.FileHandler("avg_q.log")
+handler.setLevel(logging.DEBUG)
+qLogger.addHandler(handler)
+
+
+
+class QLogger():
+    def log(self, q_table: np.array):
+        avg_q=np.mean(q_table)
+        qLogger.info(avg_q)
 
 def loss_logger_decorator(func):
     def wrapper(*args, **kwargs):
