@@ -100,7 +100,7 @@ class ConvDQNAgent(DQNAgent):
         # (the percentage of the training process at which the exploration rate should reach its minimum)
         self.epsilon_decay = ((self.epsilon - self.epsilon_min) / (n_episodes * exploration_phase_size))
         n_observations = 0
-        for e in range(n_episodes):
+        for e in range(1, n_episodes):
             self.observations = None
             observation = env.reset()
             done = False
