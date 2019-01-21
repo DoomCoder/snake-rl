@@ -37,7 +37,7 @@ class Reporter:
             means[2], self.stats_n_episodes
         )
         formated_report=report_format.format(*report_data)
-        if self.reportLogger != None:
+        if self.reportLogger is not None:
             self.reportLogger.info(formated_report)
         
         return formated_report
