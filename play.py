@@ -36,4 +36,30 @@ def watch_agent(agent: DQNAgent):
         renderer.close_window()
     print(f"Snake length: {len(env.game.snake.body)}")
     print(f"Simulation ended after {steps} steps.")
-    
+
+
+def collect_stats(agent: DQNAgent, n_games=1000):
+    MAX_STEPS = 1000
+    lenghts = []
+    looped = 0
+    for i in range(1, n_games+1):
+        env = gym.make('snake-v0')
+        # env.__init__(human_mode=False)
+        observation = env.reset()
+        done = False
+        steps = 0
+        agent.epsilon = 0.0
+        state = agent.get_last_observations(observation)
+        while not done and steps < MAX_STEPS:
+            action = agent.act(state)
+            next_observation, _, done, _ = env.step(action)
+            state = agent.get_last_observations(next_observation)
+            steps += 1
+
+        if steps == MAX_STEPS:
+            looped += 1
+        else:
+            lenghts.append(len(env.game.snake.body))
+
+        if i % (n_games//10) == 0:
+            print(f"Avg len: {sum(lenghts) / len(lenghts):.2f}, looped {looped}/{i}")

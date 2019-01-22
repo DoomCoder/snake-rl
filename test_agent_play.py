@@ -13,5 +13,8 @@ env = gym.make('snake-v0')
 agent = ConvTorchDQNAgent(env.observation_space.shape, env.action_space.n, 4, )
 agent.load("./models/", 'INSERT MODELS DIR HERE')
 
-while True:
-    play.watch_agent(agent)
+
+# while True:
+#     play.watch_agent(agent)
+
+play.collect_stats(agent)
