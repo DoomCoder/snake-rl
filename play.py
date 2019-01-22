@@ -34,6 +34,6 @@ def watch_agent(agent: DQNAgent):
             steps += 1
     finally:
         renderer.close_window()
-    print(f"Snake lenght: {len(env.game.snake.body)}")
+    print(f"Snake length: {len(env.game.snake.body)}")
     print(f"Simulation ended after {steps} steps.")
     
