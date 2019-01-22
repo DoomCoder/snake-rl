@@ -113,9 +113,9 @@ class ConvDQNAgent(DQNAgent):
                 new_observation, has_eaten, done, _ = env.step(action)
                 # rewards can be changed here
                 if done:
-                    reward = -10
+                    reward = -1
                 elif has_eaten:
-                    reward = len(env.game.snake.body)
+                    reward = 1
                 else:
                     reward = 0
 

@@ -19,9 +19,9 @@ class DQNAgent:
         self.epsilon_decay = None
 
         self.memory = deque(maxlen=10**4)
-        self.gamma = 0.6  # discount rate
+        self.gamma = 0.9  # discount rate
         self.epsilon_max = 1.0  # epsilon == exploration rate
-        self.epsilon_min = 0.05
+        self.epsilon_min = 0.01
         self.epsilon = self.epsilon_max
         self.q_learning_rate = 0.1
         self.model = self._build_model()
