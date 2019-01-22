@@ -9,7 +9,7 @@ sys.path.append('../snake_gym')
 
 env = gym.make('snake-v0')
 agent = ConvDQNAgent(env.observation_space.shape, env.action_space.n, 3)
-# agent.load("./models/...")
+agent.load("./models/SNEK-dqn-125000-episodes.h5")
 
 while True:
     play.watch_agent(agent)
