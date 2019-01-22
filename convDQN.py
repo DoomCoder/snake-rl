@@ -62,6 +62,7 @@ class ConvDQNAgent(DQNAgent):
                 (1 - self.q_learning_rate) * q_table[np.arange(actions_arr.shape[0]), actions_arr] +
                 self.q_learning_rate * q_corrections
         )
+        updated_qs_for_taken_actions[np.where(done_arr == 1)[0]] = -1  # when done just set -1
 
         q_table[np.arange(actions_arr.shape[0]), actions_arr] = updated_qs_for_taken_actions
         self.model.train_on_batch(states_arr, q_table)
@@ -112,7 +113,7 @@ class ConvDQNAgent(DQNAgent):
                 new_observation, has_eaten, done, _ = env.step(action)
                 # rewards can be changed here
                 if done:
-                    reward = -1
+                    reward = -10
                 elif has_eaten:
                     reward = len(env.game.snake.body)
                 else:
