@@ -4,17 +4,16 @@ import numpy as np
 from dqn import DQNAgent
 from reporter import Reporter
 import snake_logger
-import tensorflow as tf
-tfe = tf.contrib.eager
 from collections import deque
+from torchNet import *
 
 
 qLogger=snake_logger.QLogger()
 
 
 class ConvDDPGAgent(DQNAgent):
-    def __init__(self, state_shape, action_size, num_last_observations, loss_logging=True, rho=1e-4):
-        tf.enable_eager_execution()
+    def __init__(self, state_shape, action_size, num_last_observations, loss_logging=True, rho=1-1e-4):
+        # tf.enable_eager_execution()
         self.state_shape = state_shape
         self.action_size = action_size
         self.num_last_observations = num_last_observations
@@ -22,58 +21,30 @@ class ConvDDPGAgent(DQNAgent):
         self.epsilon_decay = None
         self.rho = rho
 
+        print(state_shape[1])
         self.memory = deque(maxlen=10**4)
         self.gamma = 0.9  # discount rate
         self.epsilon_max = 1.0  # epsilon == exploration rate
         self.epsilon_min = 0.05
         self.epsilon = self.epsilon_max
         self.q_learning_rate = 0.1
-        self.q_model = self._build_q_model()
-        self.target_q_model = self._build_q_model()
-        self.policy_model = self._build_policy_model()
-        self.target_policy_model = self._build_policy_model()
-        self.q_optimizer = tf.train.GradientDescentOptimizer(learning_rate=1e-2)
-        self.policy_optimizer = tf.train.GradientDescentOptimizer(learning_rate=1e-2)
-        self.target_policy_optimizer = tf.train.GradientDescentOptimizer(learning_rate=1e-4)
-        self.target_q_optimizer = tf.train.GradientDescentOptimizer(learning_rate=1e-4)
+        self.q_model = QNet(state_shape[1], self.action_size)
+        self.target_q_model = QNet(state_shape[1], self.action_size)
+        self.q_optimizer = torch.optim.SGD(self.q_model.parameters(), lr=1e-4)
+        self.policy_model = PolicyNet(state_shape[1], self.action_size)
+        self.target_policy_model = PolicyNet(state_shape[1], self.action_size)
+        self.policy_optimizer = torch.optim.SGD(self.policy_model.parameters(), lr=1e-4)
         # if loss_logging:
         #     self.model.train_on_batch = snake_logger.loss_logger_decorator(self.model.train_on_batch)
-
-    def _build_policy_model(self):
-        model = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(16, [3, 3], data_format='channels_first',
-                                   strides=[1, 1], activation='relu',
-                                   input_shape=(self.num_last_observations,) + self.state_shape),
-            tf.keras.layers.Conv2D(16, [3, 3], data_format='channels_first',
-                                   strides=[1, 1], activation='relu'),
-            tf.keras.layers.GlobalAveragePooling2D(),
-            tf.keras.layers.Dense(256, activation='relu'),
-            tf.keras.layers.Dense(self.action_size, activation='softmax'),
-        ])
-
-        return model
-
-    def _build_q_model(self):
-        q_model = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(16, [3, 3], data_format='channels_first',
-                                   strides=[1, 1], activation='relu',
-                                   input_shape=(self.num_last_observations,) + self.state_shape),
-            tf.keras.layers.Conv2D(16, [3, 3], data_format='channels_first',
-                                   strides=[1, 1], activation='relu'),
-            tf.keras.layers.GlobalAveragePooling2D(),
-            tf.keras.layers.Dense(256, activation='relu'),
-            tf.keras.layers.Dense(self.action_size, activation='relu'),
-        ])
-
-        return q_model
 
     def act(self, state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
 
-        state=tf.cast(state, tf.float32)
-        act_values = self.policy_model(np.expand_dims(state, 0))
-        return np.argmax(act_values[0])  # returns action
+        # state=tf.cast(state, tf.float32)
+        act_values = self.policy_model(torch.from_numpy(np.expand_dims(state, 0)).float())
+        print(act_values)
+        return np.argmax(act_values[0].detach().numpy())  # returns action
 
     def average_weights(self, weights):
         new_weights = list()
@@ -84,63 +55,57 @@ class ConvDDPGAgent(DQNAgent):
 
         return new_weights
 
-    def update_targets(self):
-        self.target_policy_model.set_weights(list([w1*(1-self.rho)+self.rho*w2 for w1, w2 in zip(self.target_policy_model.get_weights(), self.policy_model.get_weights())]))
-        self.target_q_model.set_weights(list([w1*(1-self.rho)+self.rho*w2 for w1, w2 in zip(self.target_q_model.get_weights(), self.q_model.get_weights())]))
+    def average_models(self, model1, model2):
+        params1 = model1.named_parameters()
+        params2 = model2.named_parameters()
 
+        dict_params2 = dict(params2)
 
-    def grad_q(self, states_arr, ys):
-        with tf.GradientTape() as q_tape:
-            q_values = self.q_model(states_arr, training=True)
-            q_loss = tf.reduce_mean(tf.square(q_values - ys))
+        for name1, param1 in params1:
+            if name1 in dict_params2:
+                dict_params2[name1].data.copy_(self.rho * param1.data + (1 - self.rho) * dict_params2[name1].data)
 
-        q_grads = q_tape.gradient(q_loss, self.q_model.trainable_weights)
-        self.q_optimizer.apply_gradients(zip(q_grads, self.q_model.trainable_weights),
-                                  global_step=tf.train.get_or_create_global_step())
+        model1.load_state_dict(dict_params2)
 
     def replay(self, batch_size):
         memory_sample = random.sample(self.memory, batch_size)
         np_memory_sample = np.array(memory_sample)
 
-        states_arr = tf.cast(np.stack(np_memory_sample[:, 0]), tf.float32)
-        actions_arr = tf.cast(np_memory_sample[:, 1].astype(np.int), tf.int64)
-        rewards_arr = tf.cast(np_memory_sample[:, 2].astype(np.float), tf.float32)
-        next_states_arr = tf.cast(np.stack(np_memory_sample[:, 3]).astype(np.float64), tf.float32)
+        # s = torch.from_numpy(s).float()
+        # a = torch.from_numpy(a).float()
+
+        states_arr = np.stack(np_memory_sample[:, 0]).astype(np.float64)
+        actions_arr = np.stack(np_memory_sample[:, 1]).astype(np.int)
+        rewards_arr = np_memory_sample[:, 2].astype(np.float64)
+        next_states_arr = np.stack(np_memory_sample[:, 3]).astype(np.float64)
         done_arr = np_memory_sample[:, 4].astype(np.int)
+        next_states_arr = torch.from_numpy(next_states_arr).float()
+        states_arr = torch.from_numpy(states_arr).float()
+        actions_arr = torch.from_numpy(actions_arr).float()
 
 
-        tp_preds = self.target_policy_model(next_states_arr)
-        tp_actions = np.argmax(tp_preds, axis=1)
-        qs = self.target_q_model(next_states_arr).numpy()
-        q_corrections = rewards_arr + self.gamma * (1-done_arr) * qs[np.arange(64), tp_actions]
-        ys = qs
-        for i, (ac, corr) in enumerate(zip(tp_actions, q_corrections)):
-            ys[i][ac] += corr
+        ys = rewards_arr + self.gamma * self.target_q_model((
+            next_states_arr.float(),
+            self.target_policy_model(next_states_arr).detach()))\
+            .detach().numpy() * (1-done_arr)
 
-        with tf.GradientTape() as q_tape:
-            q_values = self.q_model(states_arr, training=True)
-            q_loss = tf.reduce_mean(tf.square(q_values - ys))
+        qs = self.q_model((states_arr, actions_arr
+        ))
 
-        q_grads = q_tape.gradient(q_loss, self.q_model.trainable_weights)
-        self.q_optimizer.apply_gradients(zip(q_grads, self.q_model.trainable_weights),
-                                  global_step=tf.train.get_or_create_global_step())
+        q_loss = q_loss_fn(qs, torch.from_numpy(ys).float())
+        self.q_optimizer.zero_grad()
+        q_loss.backward()
+        self.q_optimizer.step()
 
-        with tf.GradientTape() as p_tape:
-            policy_actions = np.argmax(self.policy_model(states_arr, training=True), axis=1)
-            actions_policy = self.policy_model(states_arr, training=True)
-            y = tf.sign(tf.reduce_max(actions_policy, axis=-1, keepdims=True) - actions_policy)
-            y = (y - 1) * (-1)
-            a_values = self.q_model(states_arr, training=True).numpy()[np.arange(64), policy_actions]
-            a_values = tf.reshape(a_values, [-1, 1])
-            a_loss = -1*tf.reduce_mean(y*a_values)
+        policy_actions = self.policy_model(states_arr)
+        policy_loss = pi_loss_fn(self.q_model, states_arr, policy_actions)
 
-        p_grads = p_tape.gradient(a_loss, self.policy_model.trainable_variables)
-        self.policy_optimizer.apply_gradients(zip(p_grads, self.policy_model.trainable_variables),
-                                  global_step=tf.train.get_or_create_global_step())
+        self.policy_optimizer.zero_grad()
+        policy_loss.backward()
+        self.policy_optimizer.step()
 
-
-        self.target_policy_model.set_weights(list([w1*(1-self.rho)+self.rho*w2 for w1, w2 in zip(self.target_policy_model.get_weights(), self.policy_model.get_weights())]))
-        self.target_q_model.set_weights(list([w1*(1-self.rho)+self.rho*w2 for w1, w2 in zip(self.target_q_model.get_weights(), self.q_model.get_weights())]))
+        self.average_models(self.q_model, self.target_q_model)
+        self.average_models(self.policy_model, self.target_policy_model)
 
     def train(self, env, batch_size, n_episodes, exploration_phase_size, report_freq, save_freq, models_dir):
         reporter = Reporter(report_freq, n_episodes)
@@ -168,7 +133,9 @@ class ConvDDPGAgent(DQNAgent):
 
                 reward_sum += reward
                 next_state = self.get_last_observations(new_observation)
-                self.remember(state, action, reward, next_state, done)
+                onehot_action = np.zeros(self.action_size)
+                onehot_action[action] = 1
+                self.remember(state, onehot_action, reward, next_state, done)
                 state = next_state
 
                 steps += 1
