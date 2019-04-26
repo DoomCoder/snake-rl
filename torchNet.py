@@ -45,7 +45,7 @@ class QNet(torch.nn.Module):
         x = F.relu(self.linear1(x))
         # Computes the second fully connected layer (activation applied later)
         # Size changes from (1, 64) to (1, 10)
-        x = F.softmax(self.linear2(x))
+        x = self.linear2(x)
         return x
 
 
@@ -98,4 +98,4 @@ q_loss_fn = torch.nn.MSELoss(reduction='sum')
 
 def pi_loss_fn(q_model, state, action):
     qs = q_model((state, action))
-    return -1*torch.nn.MSELoss(reduction='sum')(0, qs)
+    return -qs.mean()
