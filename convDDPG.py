@@ -11,7 +11,7 @@ qLogger=snake_logger.QLogger()
 
 
 class ConvDDPGAgent(DQNAgent):
-    def __init__(self, state_shape, action_size, num_last_observations, loss_logging=True, rho=1-1e-1):
+    def __init__(self, state_shape, action_size, num_last_observations, loss_logging=True, rho=1-1e-2):
         # tf.enable_eager_execution()
         self.state_shape = state_shape
         self.action_size = action_size
@@ -22,17 +22,17 @@ class ConvDDPGAgent(DQNAgent):
 
         print(state_shape[1])
         self.memory = deque(maxlen=10**4)
-        self.gamma = 0.95 # discount rate
-        self.epsilon_max = 1.0  # epsilon == exploration rate
+        self.gamma = 0.7  # discount rate
+        self.epsilon_max = 0.99  # epsilon == exploration rate
         self.epsilon_min = 0.05
         self.epsilon = self.epsilon_max
         self.q_learning_rate = 0.1
         self.q_model = QNet(state_shape[1], self.action_size)
         self.target_q_model = QNet(state_shape[1], self.action_size)
-        self.q_optimizer = torch.optim.SGD(self.q_model.parameters(), lr=1e-3)
+        self.q_optimizer = torch.optim.Adam(self.q_model.parameters(), lr=1e-4)
         self.policy_model = PolicyNet(state_shape[1], self.action_size)
         self.target_policy_model = PolicyNet(state_shape[1], self.action_size)
-        self.policy_optimizer = torch.optim.SGD(self.policy_model.parameters(), lr=1e-1)
+        self.policy_optimizer = torch.optim.Adam(self.policy_model.parameters(), lr=1e-4)
 
         self.q_model.cuda()
         self.target_q_model.cuda()
@@ -44,14 +44,22 @@ class ConvDDPGAgent(DQNAgent):
 
     def act(self, state):
         if np.random.rand() <= self.epsilon:
-            return random.randrange(self.action_size)
+            a = random.randrange(self.action_size)
+            onehot_action = np.zeros(self.action_size)
+            onehot_action[a] = 1
+            return a, onehot_action
 
         # state=tf.cast(state, tf.float32)
-        act_values = self.policy_model(torch.from_numpy(np.expand_dims(state, 0)).float().to(self.cuda)).cpu()
+        # act_values = self.policy_model(torch.from_numpy(np.expand_dims(state, 0)).float().to(self.cuda)).cpu()
+        # act_values = F.softmax(act_values, dim=1).cpu()
+        act_values = self.q_model((torch.from_numpy(np.expand_dims(state, 0)).float().to(self.cuda),None)).cpu()
         if np.random.rand() <= 1e-2:
             print(act_values)
 
-        return np.argmax(act_values[0].detach().numpy())  # returns action
+        act_values = act_values[0].detach().numpy()
+        # a = np.random.choice(self.action_size, p=act_values)
+        a = np.argmax(act_values)
+        return a, act_values  # returns action
 
     def average_models(self, model1, model2):
         params1 = model1.named_parameters()
@@ -73,40 +81,51 @@ class ConvDDPGAgent(DQNAgent):
         # a = torch.from_numpy(a).float()
 
         states_arr = np.stack(np_memory_sample[:, 0]).astype(np.float64)
-        actions_arr = np.stack(np_memory_sample[:, 1]).astype(np.int)
+        actions_arr_np = np.stack(np_memory_sample[:, 1]).astype(np.int)
         rewards_arr = np_memory_sample[:, 2].astype(np.float64)
         next_states_arr = np.stack(np_memory_sample[:, 3]).astype(np.float64)
         done_arr = np_memory_sample[:, 4].astype(np.int)
         next_states_arr = torch.from_numpy(next_states_arr).float().to(self.cuda)
         states_arr = torch.from_numpy(states_arr).float().to(self.cuda)
-        actions_arr = torch.from_numpy(actions_arr).float().to(self.cuda)
+        actions_arr = torch.from_numpy(actions_arr_np).float().to(self.cuda)
+        actions_amax = torch.from_numpy(np.argmax(actions_arr_np,axis=1)).to(self.cuda)
 
         pred_actions = self.target_policy_model(next_states_arr).detach()
-        pred_actions = (pred_actions==torch.max(pred_actions)).float()
+        # pred_actions = (pred_actions==torch.max(pred_actions)).float()
 
-        ys = rewards_arr + self.gamma * self.target_q_model((
+        q_table = self.target_q_model((
             next_states_arr,
             pred_actions))\
-            .detach().cpu().numpy() * (1-done_arr)
+            .detach().cpu().numpy()
+        done_exp = np.repeat((1-done_arr)[:, np.newaxis], self.action_size, axis=1)
+        rewards_exp = np.repeat((1-rewards_arr)[:, np.newaxis], self.action_size, axis=1)
+        ys = rewards_exp + self.gamma * q_table * done_exp  # * actions_arr_np
+        ys = (1-self.q_learning_rate)*q_table[np.arange(actions_arr_np.shape[0])[:,np.newaxis], actions_arr_np] + self.q_learning_rate * ys # - (1-done_exp)
 
+        q_table[np.arange(actions_arr_np.shape[0])[:,np.newaxis], actions_arr_np] = ys
         qs = self.q_model((states_arr, actions_arr))
         # if np.random.rand() <= 1e-2:
         #     print(qs)
 
-        q_loss = q_loss_fn(qs, torch.from_numpy(ys).float().to(self.cuda))
+        print("qs:")
+        print(qs)
+
+        print("qtab:")
+        print(q_table)
+        q_loss = q_loss_fn(qs, torch.from_numpy(q_table).float().to(self.cuda))
         self.q_optimizer.zero_grad()
         q_loss.backward()
         self.q_optimizer.step()
 
-        policy_actions = self.policy_model(states_arr)
-        policy_loss = pi_loss_fn(self.q_model, states_arr, policy_actions)
+        # policy_actions = self.policy_model(states_arr)
+        # policy_loss = pi_loss_fn(self.q_model, states_arr, policy_actions, actions_amax, self.cuda)
 
-        self.policy_optimizer.zero_grad()
-        policy_loss.backward()
-        self.policy_optimizer.step()
+        # self.policy_optimizer.zero_grad()
+        # policy_loss.backward()
+        # self.policy_optimizer.step()
 
         self.average_models(self.target_q_model, self.q_model)
-        self.average_models(self.target_policy_model, self.policy_model)
+        # self.average_models(self.target_policy_model, self.policy_model)
 
     def train(self, env, batch_size, n_episodes, exploration_phase_size, report_freq, save_freq, models_dir):
         reporter = Reporter(report_freq, n_episodes)
@@ -117,16 +136,18 @@ class ConvDDPGAgent(DQNAgent):
         for e in range(n_episodes):
             self.observations = None
             observation = env.reset()
+            observation = observation/4
             done = False
             steps = 0
             reward_sum = 0
             state = self.get_last_observations(observation)
             while not done:
-                action = self.act(state)
+                action, action_distribution = self.act(state)
                 new_observation, has_eaten, done, _ = env.step(action)
+                new_observation= new_observation/4
                 # rewards can be changed here
                 if done:
-                    reward = -1
+                    reward = 0
                 elif has_eaten:
                     reward = len(env.game.snake.body)
                 else:
@@ -148,8 +169,8 @@ class ConvDDPGAgent(DQNAgent):
 
                     break
 
-                if len(self.memory) > batch_size:
-                    self.replay(batch_size)
+            if len(self.memory) > batch_size:
+                self.replay(batch_size)
 
             if self.epsilon > self.epsilon_min:
                 self.epsilon -= self.epsilon_decay

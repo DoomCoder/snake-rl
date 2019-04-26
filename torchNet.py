@@ -1,7 +1,7 @@
 import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
-
+import numpy as np
 
 class QNet(torch.nn.Module):
     def __init__(self, D, action_size):
@@ -15,8 +15,8 @@ class QNet(torch.nn.Module):
         self.conv1 = torch.nn.Conv2d(3, 16, 3, padding=1)
         self.conv2 = torch.nn.Conv2d(16, 16, 3, padding=1)
         self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.linear1 = torch.nn.Linear(16*(int(D/2))**2+self.action_size, 256)
-        self.linear2 = torch.nn.Linear(256, 1)
+        self.linear1 = torch.nn.Linear(16*(int(D/2))**2, 256)
+        self.linear2 = torch.nn.Linear(256, self.action_size)
 
     def forward(self, x):
         """
@@ -39,10 +39,11 @@ class QNet(torch.nn.Module):
         # Size changes from (16, D/2, D/2) to (1, 4608)
         # Recall that the -1 infers this dimension from the other given dimension
         s = s.view(-1, 16*(int(self.D/2))**2)
-        x = torch.cat((s, a), 1)
         # Computes the activation of the first fully connected layer
         # Size changes from (1, 4608+4) to (1, 64)
-        x = F.relu(self.linear1(x))
+        s = F.relu(self.linear1(s))
+        # x = torch.cat((s, a), 1)
+        x = s
         # Computes the second fully connected layer (activation applied later)
         # Size changes from (1, 64) to (1, 10)
         x = self.linear2(x)
@@ -90,12 +91,29 @@ class PolicyNet(torch.nn.Module):
         # Computes the second fully connected layer (activation applied later)
         # Size changes from (1, 64) to (1, 10)
         s = F.softmax(self.linear2(s))
+        # s = torch.tanh(self.linear2(s))
         return s
 
 
 q_loss_fn = torch.nn.MSELoss(reduction='sum')
 
 
-def pi_loss_fn(q_model, state, action):
-    qs = q_model((state, action))
-    return -qs.mean()
+# def pi_loss_fn(q_model, state, action):
+#     qs = q_model((state, action))
+#     return -qs.mean()
+
+def pi_loss_fn(q_model, state, action, original_actions, device):
+    # obs_shape = state.shape[1:]
+    # batch_size =  state.shape[0]
+    # repeat_shape = (batch_size, ) + (4,) + obs_shape
+    # repeat_shape = (-1, 4, 1, 1, 1)
+    # repeat_states = state.repeat(*repeat_shape)
+    # print(repeat_states.shape)
+    qs = q_model((state, action)).detach()
+    # qs_cpu = qs.cpu()
+    # target = np.argmax(qs_cpu, axis=1)
+    # target = target.to(device)
+    # print(qs)
+
+    # ce = torch.nn.CrossEntropyLoss(size_average=True, reduce='sum')(action, original_actions)
+    return torch.mean(action*qs)
