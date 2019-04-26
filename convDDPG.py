@@ -11,7 +11,7 @@ qLogger=snake_logger.QLogger()
 
 
 class ConvDDPGAgent(DQNAgent):
-    def __init__(self, state_shape, action_size, num_last_observations, loss_logging=True, rho=1-1e-2):
+    def __init__(self, state_shape, action_size, num_last_observations, loss_logging=True, rho=0):
         # tf.enable_eager_execution()
         self.state_shape = state_shape
         self.action_size = action_size
@@ -22,17 +22,17 @@ class ConvDDPGAgent(DQNAgent):
 
         print(state_shape[1])
         self.memory = deque(maxlen=10**4)
-        self.gamma = 0.7  # discount rate
+        self.gamma = 0.9  # discount rate
         self.epsilon_max = 0.99  # epsilon == exploration rate
         self.epsilon_min = 0.05
         self.epsilon = self.epsilon_max
         self.q_learning_rate = 0.1
         self.q_model = QNet(state_shape[1], self.action_size)
         self.target_q_model = QNet(state_shape[1], self.action_size)
-        self.q_optimizer = torch.optim.Adam(self.q_model.parameters(), lr=1e-4)
+        self.q_optimizer = torch.optim.Adam(self.q_model.parameters(), lr=1e-2)
         self.policy_model = PolicyNet(state_shape[1], self.action_size)
         self.target_policy_model = PolicyNet(state_shape[1], self.action_size)
-        self.policy_optimizer = torch.optim.Adam(self.policy_model.parameters(), lr=1e-4)
+        self.policy_optimizer = torch.optim.Adam(self.policy_model.parameters(), lr=1e-2)
 
         self.q_model.cuda()
         self.target_q_model.cuda()
@@ -88,31 +88,47 @@ class ConvDDPGAgent(DQNAgent):
         next_states_arr = torch.from_numpy(next_states_arr).float().to(self.cuda)
         states_arr = torch.from_numpy(states_arr).float().to(self.cuda)
         actions_arr = torch.from_numpy(actions_arr_np).float().to(self.cuda)
-        actions_amax = torch.from_numpy(np.argmax(actions_arr_np,axis=1)).to(self.cuda)
+        # actions_amax = torch.from_numpy(np.argmax(actions_arr_np,axis=1)).to(self.cuda)  # for onehot
+        actions_amax = torch.from_numpy(actions_arr_np).to(self.cuda)
 
         pred_actions = self.target_policy_model(next_states_arr).detach()
         # pred_actions = (pred_actions==torch.max(pred_actions)).float()
+
+        # q_corrections = rewards_arr + self.gamma * np.amax(self.model.predict(next_states_arr), axis=1) * (1 - done_arr)
+        # q_table = self.target_q_model.predict(states_arr)
+        #
+        # updated_qs_for_taken_actions = (
+        #         (1 - self.q_learning_rate) * q_table[np.arange(actions_arr.shape[0]), actions_arr] +
+        #         self.q_learning_rate * q_corrections
+        # )
+        # updated_qs_for_taken_actions[np.where(done_arr == 1)[0]] = -1  # when done just set -1
+        #
+        # q_table[np.arange(actions_arr.shape[0]), actions_arr] = updated_qs_for_taken_actions
+
 
         q_table = self.target_q_model((
             next_states_arr,
             pred_actions))\
             .detach().cpu().numpy()
+
+        q_corrections = rewards_arr + self.gamma * np.amax(q_table, axis=1) * (1 - done_arr)
+        updated_qs_for_taken_actions = (
+                                                   (1 - self.q_learning_rate) * q_table[np.arange(actions_arr_np.shape[0]), actions_arr_np] +
+                                                   self.q_learning_rate * q_corrections
+                                           )
+
         done_exp = np.repeat((1-done_arr)[:, np.newaxis], self.action_size, axis=1)
         rewards_exp = np.repeat((1-rewards_arr)[:, np.newaxis], self.action_size, axis=1)
-        ys = rewards_exp + self.gamma * q_table * done_exp  # * actions_arr_np
-        ys = (1-self.q_learning_rate)*q_table[np.arange(actions_arr_np.shape[0])[:,np.newaxis], actions_arr_np] + self.q_learning_rate * ys # - (1-done_exp)
+        # ys = rewards_exp + self.gamma * q_table * done_exp  # * actions_arr_np
+        # ys = (1-self.q_learning_rate)*q_table[np.arange(actions_arr_np.shape[0])[:,np.newaxis], actions_arr_np] + self.q_learning_rate * ys # - (1-done_exp)
+        updated_qs_for_taken_actions[np.where(done_arr == 1)[0]] = -1  # when done just set -1
 
-        q_table[np.arange(actions_arr_np.shape[0])[:,np.newaxis], actions_arr_np] = ys
+        q_table[np.arange(actions_arr_np.shape[0]), actions_arr_np] = updated_qs_for_taken_actions
         qs = self.q_model((states_arr, actions_arr))
         # if np.random.rand() <= 1e-2:
         #     print(qs)
 
-        print("qs:")
-        print(qs)
-
-        print("qtab:")
-        print(q_table)
-        q_loss = q_loss_fn(qs, torch.from_numpy(q_table).float().to(self.cuda))
+        q_loss = q_loss_fn(torch.from_numpy(q_table).float().to(self.cuda), qs)
         self.q_optimizer.zero_grad()
         q_loss.backward()
         self.q_optimizer.step()
@@ -124,7 +140,7 @@ class ConvDDPGAgent(DQNAgent):
         # policy_loss.backward()
         # self.policy_optimizer.step()
 
-        self.average_models(self.target_q_model, self.q_model)
+        # self.average_models(self.target_q_model, self.q_model)
         # self.average_models(self.target_policy_model, self.policy_model)
 
     def train(self, env, batch_size, n_episodes, exploration_phase_size, report_freq, save_freq, models_dir):
@@ -147,9 +163,10 @@ class ConvDDPGAgent(DQNAgent):
                 new_observation= new_observation/4
                 # rewards can be changed here
                 if done:
-                    reward = 0
+                    reward = -1
                 elif has_eaten:
-                    reward = len(env.game.snake.body)
+                    # reward = len(env.game.snake.body)
+                    reward = 1
                 else:
                     reward = 0
 
@@ -157,7 +174,7 @@ class ConvDDPGAgent(DQNAgent):
                 next_state = self.get_last_observations(new_observation)
                 onehot_action = np.zeros(self.action_size)
                 onehot_action[action] = 1
-                self.remember(state, onehot_action, reward, next_state, done)
+                self.remember(state, action, reward, next_state, done)
                 state = next_state
 
                 steps += 1
@@ -176,6 +193,7 @@ class ConvDDPGAgent(DQNAgent):
                 self.epsilon -= self.epsilon_decay
 
             if e % save_freq == 0:
+                self.average_models(self.target_q_model, self.q_model)
                 model_path = os.path.join(models_dir, f'SNEK-ddpg-{e}-episodes.h5')
                 self.save(model_path)
 

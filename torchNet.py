@@ -95,7 +95,7 @@ class PolicyNet(torch.nn.Module):
         return s
 
 
-q_loss_fn = torch.nn.MSELoss(reduction='sum')
+q_loss_fn = torch.nn.MSELoss(size_average=True, reduction='sum')
 
 
 # def pi_loss_fn(q_model, state, action):
