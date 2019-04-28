@@ -1,6 +1,7 @@
 import os
 import gym
 from convAC import ConvACAgent
+from convDDPG import ConvDDPGAgent
 
 MODELS_DIR = './models'
 
