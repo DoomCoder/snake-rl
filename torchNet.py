@@ -37,7 +37,7 @@ class PolicyNet(torch.nn.Module):
         super().__init__()
         self.D = D
         self.action_size = action_size
-        self.conv1 = torch.nn.Conv2d(3, 16, 3, padding=1)
+        self.conv1 = torch.nn.Conv2d(4, 16, 3, padding=1)
         self.conv2 = torch.nn.Conv2d(16, 16, 3, padding=1)
         self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         self.linear1 = torch.nn.Linear(16*(int(D/2))**2, 256)
@@ -80,18 +80,18 @@ q_loss_fn = torch.nn.MSELoss()
 #     qs = q_model((state, action))
 #     return -qs.mean()
 
-def pi_loss_fn(q_model, state, action, original_actions, device):
+def pi_loss_fn(q_model, state, action):
     # obs_shape = state.shape[1:]
     # batch_size =  state.shape[0]
     # repeat_shape = (batch_size, ) + (4,) + obs_shape
     # repeat_shape = (-1, 4, 1, 1, 1)
     # repeat_states = state.repeat(*repeat_shape)
     # print(repeat_states.shape)
-    qs = q_model((state, action)).detach()
+    qs = q_model(state).detach()
     # qs_cpu = qs.cpu()
     # target = np.argmax(qs_cpu, axis=1)
     # target = target.to(device)
     # print(qs)
 
     # ce = torch.nn.CrossEntropyLoss(size_average=True, reduce='sum')(action, original_actions)
-    return torch.mean(action*qs)
+    return -1*torch.mean(action*qs)
