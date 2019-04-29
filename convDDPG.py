@@ -37,7 +37,7 @@ class ConvDDPGAgent(DQNAgent):
         self.memory = deque(maxlen=10**4)
         self.temp_memory = deque(maxlen=10**4)
         self.gamma = 0.9  # discount rate
-        self.epsilon_max = 0.5  # epsilon == exploration rate
+        self.epsilon_max = 0.01  # epsilon == exploration rate
         self.epsilon_min = 0.0
         self.epsilon = self.epsilon_max
         self.q_learning_rate = 1
@@ -169,7 +169,7 @@ class ConvDDPGAgent(DQNAgent):
                     # reward = len(env.game.snake.body)
                 elif loopKiller.seen(new_observation):
                     reward = -1
-                    print("I helped!")
+                    # print("I helped!")
                     done = True
                 else:
                     reward = 0

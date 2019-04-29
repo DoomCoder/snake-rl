@@ -12,7 +12,7 @@ env = gym.make('snake-v0')
 # agent = ConvDQNAgent(env.observation_space.shape, env.action_space.n, 3)
 agent = ConvDDPGAgent(env.observation_space.shape, env.action_space.n, 4,)
 # agent.load("./models/SNEK-dqnt-195000-episodes.h5")
-agent.load("./models/", 20000, nameQ='SNEK-pg-2-Q-4000-episodes.h5', nameP='SNEK-pg-2-P-4000-episodes.h5')
+agent.load("./models/", 20000, nameQ='SNEK-pg-2-Q-9000-episodes.h5', nameP='SNEK-pg-2-P-9000-episodes.h5')
 # agent.load("./models/...")
 
 while True:
