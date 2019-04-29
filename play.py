@@ -26,9 +26,9 @@ def watch_agent(agent: DQNAgent):
         agent.epsilon = 0
         state = agent.get_last_observations(observation)
         while not done:
-            time.sleep(0.1)
+            # time.sleep(0.001)
             renderer.render_frame()
-            action = agent.act(state)
+            action, _ = agent.act(state)
             next_observation, _, done, _ = env.step(action)
             state = agent.get_last_observations(next_observation)
             steps += 1
