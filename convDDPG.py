@@ -37,8 +37,8 @@ class ConvDDPGAgent(DQNAgent):
         self.memory = deque(maxlen=10**4)
         self.temp_memory = deque(maxlen=10**4)
         self.gamma = 0.9  # discount rate
-        self.epsilon_max = 0.01  # epsilon == exploration rate
-        self.epsilon_min = 0.0
+        self.epsilon_max = 1  # epsilon == exploration rate
+        self.epsilon_min = 0
         self.epsilon = self.epsilon_max
         self.q_learning_rate = 1
         self.q_model = QNet(state_shape[1], self.action_size)
@@ -72,13 +72,13 @@ class ConvDDPGAgent(DQNAgent):
         # act_values = F.softmax(act_values, dim=1).cpu()
         # act_values = self.q_model(torch.from_numpy(np.expand_dims(state, 0)).float().to(self.cuda)).cpu()
         pr = np.random.rand()
-        # if pr <= 1e-4:
+        # if pr <= 1e-2:
         #     print(act_values)
 
         act_values = act_values[0].detach().numpy()
         a = np.random.choice(self.action_size, p=act_values)
         # a = np.argmax(act_values)
-        # if pr <= 1e-4:
+        # if pr <= 1e-2:
         #     print(a)
 
         return a, act_values  # returns action
@@ -206,9 +206,9 @@ class ConvDDPGAgent(DQNAgent):
 
     def load(self, dir, e, nameQ=None, nameP=None):
         if nameQ is None:
-            nameQ = f'SNEK-pg-2-Q-{e}-episodes.h5'
+            nameQ = f'SNEK-pg-3-Q-{e}-episodes.h5'
         if nameP is None:
-            nameP = f'SNEK-pg-2-P-{e}-episodes.h5'
+            nameP = f'SNEK-pg-3-P-{e}-episodes.h5'
 
         self.q_model.load_state_dict(torch.load(os.path.join(dir, nameQ)))
         # self.q_model.eval()

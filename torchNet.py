@@ -12,11 +12,12 @@ class QNet(torch.nn.Module):
         super().__init__()
         self.D = D
         self.action_size = action_size
-        self.conv1 = torch.nn.Conv2d(4, 16, 3, padding=1)
-        self.conv2 = torch.nn.Conv2d(16, 32, 3, padding=1)
+        self.conv1 = torch.nn.Conv2d(4, 32, 3, padding=1)
+        self.conv2 = torch.nn.Conv2d(32, 32, 3, padding=1)
         self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.linear1 = torch.nn.Linear(32*(int(D/2))**2, 256)
-        self.linear2 = torch.nn.Linear(256, self.action_size)
+        self.linear1 = torch.nn.Linear(32*(int(D/2))**2, 512)
+        self.linear2 = torch.nn.Linear(512, 256)
+        self.linear3 = torch.nn.Linear(256, self.action_size)
 
     def forward(self, s):
         s = F.relu(self.conv1(s))
@@ -24,7 +25,8 @@ class QNet(torch.nn.Module):
         s = self.pool(s)
         s = s.view(-1, 32*(int(self.D/2))**2)
         s = F.relu(self.linear1(s))
-        s = self.linear2(s)
+        s = F.relu(self.linear2(s))
+        s = self.linear3(s)
         return s
 
 
@@ -37,11 +39,12 @@ class PolicyNet(torch.nn.Module):
         super().__init__()
         self.D = D
         self.action_size = action_size
-        self.conv1 = torch.nn.Conv2d(4, 16, 3, padding=1)
-        self.conv2 = torch.nn.Conv2d(16, 16, 3, padding=1)
+        self.conv1 = torch.nn.Conv2d(4, 32, 3, padding=1)
+        self.conv2 = torch.nn.Conv2d(32, 32, 3, padding=1)
         self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.linear1 = torch.nn.Linear(16*(int(D/2))**2, 256)
-        self.linear2 = torch.nn.Linear(256, self.action_size)
+        self.linear1 = torch.nn.Linear(32*(int(D/2))**2, 512)
+        self.linear2 = torch.nn.Linear(512, 256)
+        self.linear3 = torch.nn.Linear(256, self.action_size)
 
     def forward(self, s):
         """
@@ -62,13 +65,14 @@ class PolicyNet(torch.nn.Module):
         # Reshape data to input to the input layer of the neural net
         # Size changes from (16, D/2, D/2) to (1, 4608)
         # Recall that the -1 infers this dimension from the other given dimension
-        s = s.view(-1, 16*(int(self.D/2))**2)
+        s = s.view(-1, 32*(int(self.D/2))**2)
         # Computes the activation of the first fully connected layer
         # Size changes from (1, 4608+4) to (1, 64)
         s = F.relu(self.linear1(s))
         # Computes the second fully connected layer (activation applied later)
         # Size changes from (1, 64) to (1, 10)
-        s = F.softmax(self.linear2(s))
+        s = F.tanh(self.linear2(s))
+        s = F.softmax(self.linear3(s))
         # s = torch.tanh(self.linear2(s))
         return s
 
