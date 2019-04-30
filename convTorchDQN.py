@@ -55,16 +55,14 @@ class ConvTorchDQNAgent(DQNAgent):
     def act(self, state):
         if np.random.rand() < self.epsilon:
             a = random.randrange(self.action_size)
-            onehot_action = np.zeros(self.action_size)
-            onehot_action[a] = 1
-            return a, onehot_action
+            return a
 
         act_values = self.q_model(torch.from_numpy(np.expand_dims(state, 0)).float().to(self.cuda)).cpu()
 
         act_values = act_values[0].detach().numpy()
         a = np.argmax(act_values)
 
-        return a, act_values
+        return a
 
     def average_models(self, model1, model2):
         params1 = model1.named_parameters()
@@ -126,7 +124,7 @@ class ConvTorchDQNAgent(DQNAgent):
             reward_sum = 0
             state = self.get_last_observations(observation)
             while not done:
-                action, action_distribution = self.act(state)
+                action = self.act(state)
                 new_observation, has_eaten, done, _ = env.step(action)
                 # rewards can be changed here
                 if done:
@@ -144,8 +142,6 @@ class ConvTorchDQNAgent(DQNAgent):
                 loopKiller.observe(new_observation)
                 reward_sum += reward
                 next_state = self.get_last_observations(new_observation)
-                onehot_action = np.zeros(self.action_size)
-                onehot_action[action] = 1
                 self.remember(state, action, reward, next_state, done)
                 state = next_state
 
