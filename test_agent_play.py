@@ -29,7 +29,7 @@ def main(args):
         models_path = MODELS[args.agent]['model']
 
     if models_path is None:
-        print("Please provide model's path [-m path]")
+        print("Please provide model's path [--model path]")
 
     agent = agent_class(env.observation_space.shape, env.action_space.n, 4, )
     agent.load(models_path)
