@@ -46,11 +46,15 @@ class ConvACAgent(DQNAgent):
         self.target_policy_model = PolicyNet(state_shape[1], self.action_size)
         self.policy_optimizer = torch.optim.RMSprop(self.policy_model.parameters(), lr=1e-4)
 
-        self.q_model.cuda()
-        self.target_q_model.cuda()
-        self.policy_model.cuda()
-        self.target_policy_model.cuda()
-        self.cuda = torch.device('cuda')
+        if torch.cuda.is_available():
+            self.q_model.cuda()
+            self.target_q_model.cuda()
+            self.policy_model.cuda()
+            self.target_policy_model.cuda()
+            self.cuda = torch.device('cuda')
+        else:
+            self.cuda = torch.device('cpu')
+
 
     def remember(self, state, action, reward, next_state, done):
         state = self.reshape(state)
