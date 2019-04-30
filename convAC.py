@@ -191,10 +191,17 @@ class ConvACAgent(DQNAgent):
     def load(self, dir):
         nameQ = dir[:-3]+"-Q"+dir[-3:]
         nameP = dir[:-3]+"-P"+dir[-3:]
-        self.q_model.load_state_dict(torch.load(nameQ))
-        # self.q_model.eval()
-        self.policy_model.load_state_dict(torch.load(nameP))
-        # self.policy_model.eval()
+        if torch.cuda.is_available():
+            self.q_model.load_state_dict(torch.load(nameQ))
+            # self.q_model.eval()
+            self.policy_model.load_state_dict(torch.load(nameP))
+            # self.policy_model.eval()
+        else:
+            self.q_model.load_state_dict(torch.load(nameQ, map_location='cpu'))
+            # self.q_model.eval()
+            self.policy_model.load_state_dict(torch.load(nameP, map_location='cpu'))
+            # self.policy_model.eval()
+
 
     def save(self, dir):
         nameQ = dir[:-3]+"-Q"+dir[-3:]
