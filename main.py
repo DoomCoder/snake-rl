@@ -1,6 +1,6 @@
 import os
 import gym
-from convDDPG import ConvDDPGAgent
+from convTorchDQN import ConvTorchDQNAgent
 
 MODELS_DIR = './models'
 
@@ -17,7 +17,6 @@ if __name__ == "__main__":
         os.makedirs(MODELS_DIR)
 
     env = gym.make('snake-v0')
-    agent = ConvDDPGAgent(env.observation_space.shape, env.action_space.n, NUM_LAST_FRAMES,)
-    # agent.load("./models/", 20000, nameQ='SNEK-pg-2-Q-4000-episodes.h5', nameP='SNEK-pg-2-P-4000-episodes.h5')
+    agent = ConvTorchDQNAgent(env.observation_space.shape, env.action_space.n, NUM_LAST_FRAMES, )
     agent.train(env, BATCH_SIZE, N_EPISODES, EXPLORATION_PHASE_SIZE, REPORT_FREQ, SAVE_FREQ, MODELS_DIR)
     env.close()
