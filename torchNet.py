@@ -98,4 +98,5 @@ def pi_loss_fn(q_model, state, action):
     # print(qs)
 
     # ce = torch.nn.CrossEntropyLoss(size_average=True, reduce='sum')(action, original_actions)
-    return -1*torch.mean(action*qs)
+    # return torch.mean(torch.log(action)*qs)
+    return -1*torch.mean(torch.log(action)*qs)
