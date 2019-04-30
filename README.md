@@ -7,7 +7,7 @@ Train convolutional selected model on environment.
 Currently doesn't support arguments.
 
 ### test_agent_play.py
-####Supported arguments:  
+#### Supported arguments:  
 - -a, --agent  
  Supported agents: 
    - tDQN - Deep Q Learning in Pytorch
