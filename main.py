@@ -1,13 +1,13 @@
 import os
 import gym
 from convAC import ConvACAgent
-from convDDPG import ConvDDPGAgent
+from convTorchDQN import ConvTorchDQNAgent
 
 MODELS_DIR = './models'
 
 NUM_LAST_FRAMES = 4
 BATCH_SIZE = 32
-N_EPISODES = 10**4
+N_EPISODES = 10**5
 EXPLORATION_PHASE_SIZE = 0.8
 REPORT_FREQ = 100
 TARGET_UPDATE_FREQ = 1000
