@@ -185,7 +185,8 @@ class ConvACAgent(DQNAgent):
                 model_path = os.path.join(models_dir, f'SNEK-AC-{e}-episodes.h5')
                 self.save(model_path)
 
-        self.save(models_dir, n_episodes)
+        model_path = os.path.join(models_dir, f'SNEK-AC-{n_episodes}-episodes.h5')
+        self.save(model_path)
 
     def load(self, dir):
         nameQ = dir[:-3]+"-Q"+dir[-3:]
