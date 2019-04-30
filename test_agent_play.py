@@ -1,7 +1,7 @@
 import gym
 import play
 from convTorchDQN import ConvTorchDQNAgent
-# from convDQN import ConvDQNAgent
+from convDQN import ConvDQNAgent
 from convAC import ConvACAgent
 from time import sleep
 import argparse
@@ -11,7 +11,7 @@ import os
 MODELS = {
     'tDQN': {'agent': ConvTorchDQNAgent, 'model': None, 'description': "Deep Q-learning agent in pytorch"},
     'tAC': {'agent': ConvACAgent, 'model': './models/SNEK-AC.h5', 'description': "Actor-Critic agent in pytorch"},
-    # 'kDQN': {'agent': ConvDQNAgent, 'model': None, 'description': "Deep Q-learning agent in keras"}
+    'kDQN': {'agent': ConvDQNAgent, 'model': None, 'description': "Deep Q-learning agent in keras"}
 }
 
 
@@ -29,7 +29,7 @@ def main(args):
         models_path = MODELS[args.agent]['model']
 
     if models_path is None:
-        print("Please provide model's path")
+        print("Please provide model's path [-m path]")
 
     agent = agent_class(env.observation_space.shape, env.action_space.n, 4, )
     agent.load(models_path)
