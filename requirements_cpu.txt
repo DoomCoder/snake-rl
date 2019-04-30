@@ -1,0 +1,5 @@
+numpy==1.16.0
+gym==0.10.9
+torch==1.0.1
+Keras==2.2.4
+tensorflow==1.13.1
