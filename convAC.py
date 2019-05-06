@@ -125,7 +125,6 @@ class ConvACAgent(DQNAgent):
         policy_loss = pi_loss_fn(self.q_model, states_arr, actions)
         self.policy_optimizer.zero_grad()
         policy_loss.backward()
-        print(policy_loss)
         self.policy_optimizer.step()
 
     def train(self, env, batch_size, n_episodes, exploration_phase_size, report_freq, save_freq, models_dir):
