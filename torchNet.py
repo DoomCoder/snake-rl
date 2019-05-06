@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 
+
 class QNet(torch.nn.Module):
     def __init__(self, D, action_size):
         super().__init__()
@@ -48,6 +49,7 @@ class PolicyNet(torch.nn.Module):
 
 
 q_loss_fn = torch.nn.MSELoss()
+
 
 def pi_loss_fn(q_model, state, action):
     qs = q_model(state).detach()

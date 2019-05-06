@@ -1,6 +1,6 @@
 import os
 import gym
-from convAC import ConvACAgent
+from convAC_tf import ConvACAgent
 from convTorchDQN import ConvTorchDQNAgent
 
 MODELS_DIR = './models'
