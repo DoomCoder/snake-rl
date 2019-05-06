@@ -23,7 +23,7 @@ class QNet(tf.keras.Model):
         self.dense2 = tf.keras.layers.Dense(256)
         self.dense3 = tf.keras.layers.Dense(self.action_size)
 
-    def call(self, input_tensor, training=False):
+    def call(self, input_tensor):
         x = self.conv1(input_tensor)
         x = tf.nn.relu(x)
         x = self.conv2(x)
@@ -58,7 +58,7 @@ class PolicyNet(tf.keras.Model):
         self.dense2 = tf.keras.layers.Dense(256)
         self.dense3 = tf.keras.layers.Dense(self.action_size)
 
-    def call(self, input_tensor, training=False):
+    def call(self, input_tensor):
         x = self.conv1(input_tensor)
         x = tf.nn.relu(x)
         x = self.conv2(x)

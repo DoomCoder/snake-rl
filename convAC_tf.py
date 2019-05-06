@@ -85,6 +85,7 @@ class ConvACAgent(DQNAgent):
         rewards_arr = np_memory_sample[:, 2].astype(np.float64)
         next_states_arr = np.stack(np_memory_sample[:, 3]).astype(np.float64)
         done_arr = np_memory_sample[:, 4].astype(np.int)
+
         actions_next_prob = self.policy_model(next_states_arr)
         actions_next = [np.random.choice(self.action_size, p=act_values) for act_values in actions_next_prob]
 
