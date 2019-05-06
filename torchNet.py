@@ -51,4 +51,10 @@ q_loss_fn = torch.nn.MSELoss()
 
 def pi_loss_fn(q_model, state, action):
     qs = q_model(state).detach()
-    return -1*torch.mean(action*qs)
+    # print(qs.shape)
+    # print(action.shape)
+    # print((torch.diag(torch.mm(action.detach(), qs.t())).unsqueeze(1).repeat(1,4)).shape)
+    # print(torch.dot(action[0], qs[0]))
+    # print(torch.diag(torch.mm(action.detach(), qs.t())).unsqueeze(1).repeat(1,4)[0])
+    advantages = qs - torch.diag(torch.mm(action.detach(), qs.t())).unsqueeze(1).repeat(1,4)
+    return -1*torch.mean(action*advantages)
